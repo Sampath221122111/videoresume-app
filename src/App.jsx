@@ -112,10 +112,11 @@ input::placeholder{color:rgba(90,90,90,0.5)}select{appearance:none}a{text-decora
   .upload-shell{padding:84px 16px 24px!important;align-items:flex-start!important}
   .upload-card{padding:24px 18px!important}
   .recorder-shell{position:fixed!important;inset:0!important;z-index:100!important;background:#000!important;display:flex!important;flex-direction:column!important;justify-content:flex-end!important;padding:0!important}
-  .recorder-preview{position:absolute!important;inset:0!important;width:100%!important;height:100dvh!important;aspect-ratio:auto!important;border-radius:0!important;margin:0!important}
-  .recorder-controls{position:relative!important;z-index:2!important;display:flex!important;gap:10px!important;width:100%!important;padding:22px 16px 30px!important;background:linear-gradient(transparent,rgba(0,0,0,.92) 36%)!important}
+  .recorder-preview{position:absolute!important;inset:0!important;width:100vw!important;height:100dvh!important;aspect-ratio:auto!important;border-radius:0!important;margin:0!important}
+  .recorder-preview>video{width:100%!important;height:100%!important;object-fit:cover!important;object-position:center!important}
+  .recorder-controls{position:fixed!important;left:0!important;right:0!important;bottom:0!important;z-index:102!important;display:flex!important;gap:10px!important;width:100%!important;padding:22px 16px max(30px,env(safe-area-inset-bottom))!important;background:linear-gradient(transparent,rgba(0,0,0,.94) 38%)!important}
   .recorder-controls>button{flex:1!important;min-width:0!important}
-  .camera-switch{position:absolute!important;top:18px!important;right:16px!important;z-index:3!important;padding:9px 13px!important;border-radius:20px!important;border:1px solid rgba(255,255,255,.2)!important;background:rgba(0,0,0,.55)!important;color:#fff!important;font:600 12px ${T.font}!important;backdrop-filter:blur(12px)!important}
+  .camera-switch{position:absolute!important;top:18px!important;right:16px!important;z-index:3!important;width:44px!important;height:44px!important;padding:0!important;border-radius:50%!important;border:1px solid rgba(255,255,255,.22)!important;background:rgba(0,0,0,.58)!important;color:#fff!important;display:flex!important;align-items:center!important;justify-content:center!important;backdrop-filter:blur(12px)!important}
   .toast{left:16px!important;right:16px!important;top:14px!important;max-width:none!important}
 }
 @media (max-width:390px){
@@ -307,7 +308,7 @@ const Recorder=({onDone,onCancel})=>{
   return <div className="recorder-shell">
     <div className="recorder-preview" style={{borderRadius:14,overflow:'hidden',background:'#000',marginBottom:16,position:'relative',aspectRatio:'16/9'}}>
       {pv?<video src={URL.createObjectURL(pv)} controls style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>:<video ref={vr} autoPlay muted playsInline style={{width:'100%',height:'100%',objectFit:'cover',display:'block',transform:facing==='user'?'scaleX(-1)':'none'}}/>}
-      {!pv&&!rec&&rdy&&<button className="camera-switch" onClick={switchCamera} type="button" aria-label="Switch camera">{facing==='user'?'Back camera':'Front camera'}</button>}
+      {!pv&&!rec&&rdy&&<button className="camera-switch" onClick={switchCamera} type="button" aria-label={facing==='user'?'Switch to back camera':'Switch to front camera'} title={facing==='user'?'Switch to back camera':'Switch to front camera'}><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M20 7h-3l-1.5-2h-5L9 7H6a3 3 0 0 0-3 3v7a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-7a3 3 0 0 0-3-3Z"/><circle cx="13" cy="13.5" r="3.5"/><path d="M6 13h.01"/><path d="m4 4 2-2M4 4l2 2"/></svg></button>}
       {cd!==null&&<div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.6)'}}><span style={{fontSize:64,fontWeight:800,color:'#fff'}}>{cd}</span></div>}
       {rec&&<div style={{position:'absolute',top:12,left:12,display:'flex',alignItems:'center',gap:6,background:'rgba(0,0,0,0.7)',borderRadius:20,padding:'5px 14px'}}><div style={{width:8,height:8,borderRadius:'50%',background:T.danger,animation:'pulse 1s ease infinite'}}/><span style={{color:'#fff',fontSize:12,fontWeight:600}}>REC {fm(el)}</span></div>}
       {rec&&<div style={{position:'absolute',bottom:0,left:0,right:0,height:3,background:'rgba(255,255,255,0.06)'}}><div style={{height:'100%',background:T.gradient,width:`${(el/300)*100}%`,transition:'width 1s'}}/></div>}
