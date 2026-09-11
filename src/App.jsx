@@ -46,6 +46,18 @@ input::placeholder{color:rgba(90,90,90,0.5)}select{appearance:none}a{text-decora
 @keyframes recPulseSoft{0%,100%{opacity:0.7}50%{opacity:1}}
 @keyframes waveExpand{0%{opacity:0;transform:translateX(-2px)}50%{opacity:0.8}100%{opacity:0;transform:translateX(3px)}}
 @keyframes arrowBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+@keyframes gradePop{0%{transform:scale(.4) rotate(-12deg);opacity:0;filter:blur(6px)}60%{transform:scale(1.18) rotate(3deg);opacity:1;filter:blur(0)}100%{transform:scale(1) rotate(0)}}
+@keyframes ringGlow{0%,100%{filter:drop-shadow(0 0 3px currentColor)}50%{filter:drop-shadow(0 0 12px currentColor)}}
+@keyframes sweep{0%{transform:translateX(-100%)}100%{transform:translateX(400%)}}
+@keyframes countUpBlur{from{filter:blur(8px);opacity:0;transform:translateY(10px)}to{filter:blur(0);opacity:1;transform:translateY(0)}}
+@keyframes tabPop{from{transform:scale(.94);opacity:.4}to{transform:scale(1);opacity:1}}
+@keyframes tagDrop{from{transform:translateY(-10px) scale(.8);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}
+@keyframes borderTrace{0%{background-position:0% 50%}100%{background-position:200% 50%}}
+.lift{will-change:transform}
+.lift:hover{transform:translateY(-5px);border-color:rgba(255,255,255,0.14)!important;box-shadow:0 18px 50px rgba(0,0,0,.45)}
+.sweepbar{position:relative;overflow:hidden}
+.sweepbar::after{content:'';position:absolute;inset:0;width:30%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.45),transparent);animation:sweep 2.6s ease-in-out infinite;animation-delay:1.4s}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 @keyframes barGrow{from{height:0}}
 @keyframes particleDrift{0%{transform:translateY(100vh) translateX(0);opacity:0}10%{opacity:0.15}90%{opacity:0.15}100%{transform:translateY(-20px) translateX(20px);opacity:0}}
 @keyframes orbFloat{0%,100%{transform:translate(0,0) scale(1)}25%{transform:translate(30px,-20px) scale(1.05)}50%{transform:translate(-20px,30px) scale(0.95)}75%{transform:translate(15px,15px) scale(1.02)}}
@@ -68,7 +80,7 @@ const fmtTime=s=>`${Math.floor(s/60)}:${String(Math.round(s%60)).padStart(2,'0')
    PRIMITIVES
    ================================================================ */
 const Card=({children,style={},animate=false,delay=0,glow=false,onMouseEnter,onMouseLeave})=>
-  <div onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave} style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:16,padding:22,backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',transition:'all 0.4s cubic-bezier(0.4,0,0.2,1)',...(animate?{animation:`cardReveal 0.6s ease ${delay}s both`}:{}),...(glow?{boxShadow:`0 0 30px ${T.glow}, inset 0 1px 0 rgba(255,255,255,0.03)`}:{}),...style}}>{children}</div>;
+  <div className="lift" onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave} style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:16,padding:22,backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',transition:'all 0.4s cubic-bezier(0.4,0,0.2,1)',...(animate?{animation:`cardReveal 0.6s ease ${delay}s both`}:{}),...(glow?{boxShadow:`0 0 30px ${T.glow}, inset 0 1px 0 rgba(255,255,255,0.03)`}:{}),...style}}>{children}</div>;
 
 const Input=({label,type="text",value,onChange,placeholder,error,icon,disabled})=>
   <div style={{marginBottom:20}}>
@@ -946,7 +958,7 @@ const PerfBar=({label,value,color,rank,avg,delay})=>{
       <span style={{fontSize:18,fontWeight:800,fontFamily:"'JetBrains Mono',monospace",color,letterSpacing:-0.5}}>{counter}%</span>
     </div>
     <div style={{height:6,borderRadius:6,background:'rgba(255,255,255,0.03)',position:'relative',overflow:'visible'}}>
-      <div style={{height:'100%',borderRadius:6,width:`${w}%`,background:`linear-gradient(90deg,${color}40,${color})`,transition:'width 1.4s cubic-bezier(0.23,1,0.32,1)',position:'relative'}}>
+      <div className="sweepbar" style={{height:'100%',borderRadius:6,width:`${w}%`,background:`linear-gradient(90deg,${color}40,${color})`,transition:'width 1.4s cubic-bezier(0.23,1,0.32,1)',position:'relative'}}>
         <div style={{position:'absolute',right:-3,top:'50%',transform:'translateY(-50%)',width:10,height:10,borderRadius:'50%',background:color,filter:'blur(4px)',opacity:w>0?0.8:0,transition:'opacity 0.5s 1s'}}/>
       </div>
       <div style={{position:'absolute',top:-2,bottom:-2,width:1,background:'rgba(255,255,255,0.12)',left:`${avg}%`,transition:'left 1s ease 0.5s'}}/>
@@ -972,7 +984,7 @@ const GaugeRing=({label,value,color,delay})=>{
     <div style={{position:'relative',width:80,height:80}}>
       <svg width="80" height="80" viewBox="0 0 80 80" style={{transform:'rotate(-90deg)'}}>
         <circle cx="40" cy="40" r="32" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="5"/>
-        <circle cx="40" cy="40" r="32" fill="none" stroke={color} strokeWidth="5" strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={offset} style={{transition:'stroke-dashoffset 1.5s cubic-bezier(0.4,0,0.2,1)'}}/>
+        <circle cx="40" cy="40" r="32" fill="none" stroke={color} strokeWidth="5" strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={offset} color={color} style={{transition:'stroke-dashoffset 1.5s cubic-bezier(0.4,0,0.2,1)',animation:'ringGlow 3.2s ease-in-out 1.8s infinite'}}/>
       </svg>
       <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-55%)',fontSize:16,fontWeight:800,fontFamily:"'JetBrains Mono',monospace",color:'#fff'}}>{counter}</div>
     </div>
@@ -1019,7 +1031,7 @@ const SkillTag=({skill,delay})=>{
     border:`1px solid ${hov?'rgba(255,255,255,0.12)':T.border}`,
     color:hov?'#fff':T.muted,transition:'all 0.3s',cursor:'default',
     transform:hov?'translateY(-2px)':'none',
-    animation:`cardIn 0.4s cubic-bezier(0.34,1.56,0.64,1) ${0.5+delay*0.06}s both`,
+    animation:`tagDrop 0.45s cubic-bezier(0.34,1.56,0.64,1) ${0.5+delay*0.04}s both`,
   }}>{skill}</span>;
 };
 
@@ -1032,7 +1044,7 @@ const StatMini=({value,label})=>{
     border:`1px solid ${hov?'rgba(255,255,255,0.08)':T.border}`,
     transition:'all 0.3s',transform:hov?'translateY(-2px)':'none',
   }}>
-    <div style={{fontSize:24,fontWeight:800,fontFamily:"'JetBrains Mono',monospace",color:'#fff',letterSpacing:-1}}>{value}</div>
+    <div style={{fontSize:24,fontWeight:800,fontFamily:"'JetBrains Mono',monospace",color:'#fff',letterSpacing:-1,animation:'countUpBlur 0.7s cubic-bezier(0.22,1,0.36,1) both'}}>{value}</div>
     <div style={{fontSize:10,color:T.dim,marginTop:4,textTransform:'uppercase',letterSpacing:0.8}}>{label}</div>
   </div>;
 };
@@ -1088,10 +1100,10 @@ const AnaTab=({subs,selSub,setSelSub})=>{
 
     {/* Submission Selector Tabs */}
     <div style={{display:'flex',gap:6,marginBottom:28,flexWrap:'wrap',animation:'enterUp 0.5s ease 0.1s both'}}>
-      {subs.map((s,i)=><button key={s.id} onClick={()=>setSelSub(s)} style={{padding:'9px 18px',borderRadius:10,fontSize:12,fontWeight:600,fontFamily:T.font,cursor:'pointer',transition:'all 0.3s',border:`1px solid ${cur?.id===s.id?'rgba(255,255,255,0.12)':T.border}`,background:cur?.id===s.id?'rgba(255,255,255,0.06)':'rgba(255,255,255,0.01)',color:cur?.id===s.id?'#fff':T.muted}}>{s.video_filename||`Submission ${i+1}`}</button>)}
+      {subs.map((s,i)=><button key={s.id} onClick={()=>setSelSub(s)} style={{padding:'9px 18px',borderRadius:10,fontSize:12,fontWeight:600,fontFamily:T.font,cursor:'pointer',transition:'all 0.3s',border:`1px solid ${cur?.id===s.id?'rgba(255,255,255,0.12)':T.border}`,background:cur?.id===s.id?'rgba(255,255,255,0.06)':'rgba(255,255,255,0.01)',color:cur?.id===s.id?'#fff':T.muted,animation:cur?.id===s.id?'tabPop 0.35s cubic-bezier(0.34,1.56,0.64,1)':'none'}}>{s.video_filename||`Submission ${i+1}`}</button>)}
     </div>
 
-    {cur&&<div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:18}}>
+    {cur&&<div key={cur.id} style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:18}}>
 
       {/* 1. PERFORMANCE RANKING — sorted bars with rank badges */}
       <Card animate delay={0.15} style={{padding:28}}>
@@ -1107,7 +1119,7 @@ const AnaTab=({subs,selSub,setSelSub})=>{
             <GaugeRing label="" value={avg} color={gradeColor} delay={0}/>
           </div>
           <div style={{textAlign:'center'}}>
-            <div style={{fontSize:48,fontWeight:800,fontFamily:"'JetBrains Mono',monospace",color:gradeColor,lineHeight:1}}>{grade}</div>
+            <div style={{fontSize:48,fontWeight:800,fontFamily:"'JetBrains Mono',monospace",color:gradeColor,lineHeight:1,animation:'gradePop 0.9s cubic-bezier(0.34,1.56,0.64,1) 1.1s both'}}>{grade}</div>
             <div style={{fontSize:11,color:T.dim,marginTop:4,textTransform:'uppercase',letterSpacing:1}}>{avg>=80?'Interview Ready':avg>=65?'Almost There':avg>=50?'Needs Work':'Keep Practicing'}</div>
           </div>
           <div style={{width:'100%',padding:'12px 16px',borderRadius:12,background:'rgba(255,255,255,0.02)',border:`1px solid ${T.border}`,display:'flex',justifyContent:'space-between',fontSize:12}}>
@@ -1488,7 +1500,7 @@ const UploadOptionCard=({type,title,desc,badge,onClick})=>{
 
 /* Upload Page */
 const UploadPg=({go,show,session,profile,ls})=>{const[mode,setMode]=useState(null),[file,setFile]=useState(null),[drag,setDrag]=useState(false);const[upl,setUpl]=useState(false),[prog,setProg]=useState(0),[stage,setStage]=useState("");const[error,setError]=useState(null),[prev,setPrev]=useState(null),[isRec,setIsRec]=useState(false);const fr=useRef();const hf=f=>{const v=valFile(f);if(!v.ok){setError(v.err);show(v.err,"error");return}setError(null);setFile(f);setPrev(URL.createObjectURL(f))};
-  const upload=async()=>{if(!file||!session)return;setUpl(true);setProg(0);setStage("Uploading video...");try{const cloud=await uploadToCloudinary(file,pct=>{setProg(Math.round(pct*0.4));setStage(`Uploading... ${pct}%`)});setStage("Saving to database...");setProg(42);const sub=await db.createSubmission(session.user.id,cloud.secure_url,file.name,file.size,isRec?"record":"upload");setProg(45);setStage("Starting AI analysis...");api.setToken(session.access_token);try{const job=await api.startProcessing({video_url:cloud.secure_url,submission_id:sub.id,user_id:session.user.id,user_name:profile?.full_name||"Student",user_university:profile?.university||"",user_branch:profile?.branch||"",user_year:profile?.year_of_study||1});setProg(50);await api.waitForCompletion(job.job_id,s=>{const backendProg=s.progress||0;setProg(50+Math.round(backendProg*0.5));setStage(s.message||"Processing...")},5000);show("Resume & clip ready!","success")}catch(e){console.error(e);show("Uploaded! Processing queued.","info")}await ls(session.user.id);go("dashboard")}catch(err){console.error(err);show(err.message||"Failed","error");try{await ls(session.user.id)}catch{}}finally{setUpl(false)}};
+  const upload=async()=>{if(!file||!session)return;setUpl(true);setProg(0);setStage("Uploading video...");try{const cloud=await uploadToCloudinary(file,pct=>{setProg(Math.round(pct*0.4));setStage(`Uploading... ${pct}%`)});setStage("Saving to database...");setProg(42);const sub=await db.createSubmission(session.user.id,cloud.secure_url,file.name,file.size,isRec?"record":"upload");setProg(45);setStage("Starting AI analysis...");api.setToken(session.access_token);try{const job=await api.startProcessing({video_url:cloud.secure_url,submission_id:sub.id,user_id:session.user.id,user_name:profile?.full_name||"Student",user_university:profile?.university||"",user_branch:profile?.branch||"",user_year:profile?.year_of_study||1,user_email:session.user.email||"",user_phone:profile?.phone||"",user_linkedin:profile?.linkedin||"",user_location:profile?.location||"",target_job_description:profile?.target_jd||""});setProg(50);await api.waitForCompletion(job.job_id,s=>{const backendProg=s.progress||0;setProg(50+Math.round(backendProg*0.5));setStage(s.message||"Processing...")},5000);show("Resume & clip ready!","success")}catch(e){console.error(e);show("Uploaded! Processing queued.","info")}await ls(session.user.id);go("dashboard")}catch(err){console.error(err);show(err.message||"Failed","error");try{await ls(session.user.id)}catch{}}finally{setUpl(false)}};
   return<div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:24,position:'relative',zIndex:2}}><Card style={{width:'100%',maxWidth:560,padding:36,animation:'fadeUp .4s ease'}} glow><div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:28}}><div><h2 style={{fontSize:22,fontWeight:800}}>New Submission</h2><p style={{color:T.dim,fontSize:13,marginTop:4}}>Record or upload</p></div>{!upl&&<Btn v="ghost" onClick={()=>go("dashboard")} full={false}>← Back</Btn>}</div>{upl&&prog>=45&&<FaceScan stage={stage} prog={Math.min(Math.round((prog-45)*100/55),100)}/>}{!upl&&!mode&&!file&&<div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginBottom:20,perspective:1200}}>
   <UploadOptionCard type="record" title="Record" desc="WEBCAM + MIC" badge="Live" onClick={()=>setMode('record')}/>
   <UploadOptionCard type="upload" title="Upload" desc="MP4 · WEBM · MOV" badge="200MB Max" onClick={()=>setMode('upload')}/>
