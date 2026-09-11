@@ -21,7 +21,8 @@ const T = {
 const STYLES = `
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
-body{overflow-x:hidden;background:${T.bg};font-family:${T.font}}
+html,body,#root{width:100%;min-height:100%;}
+body{overflow-x:clip;background:${T.bg};font-family:${T.font}}
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.06);border-radius:10px}
 input::placeholder{color:rgba(90,90,90,0.5)}select{appearance:none}a{text-decoration:none}
@@ -71,10 +72,11 @@ input::placeholder{color:rgba(90,90,90,0.5)}select{appearance:none}a{text-decora
 @keyframes navSlide{from{transform:translateX(-12px);opacity:0}to{transform:translateX(0);opacity:1}}
 @keyframes logoGlow{0%,100%{box-shadow:0 0 0 rgba(255,255,255,0)}50%{box-shadow:0 0 20px rgba(255,255,255,0.08)}}
 @media (max-width:720px){
-  html,body,#root{width:100%;min-width:0;overflow-x:hidden;overflow-y:auto!important}
-  .auth-shell{padding:78px 16px 24px!important;align-items:flex-start!important}
+  html,body,#root{width:100%;min-width:0;min-height:100%;overflow-x:clip!important}
+  .auth-shell{padding:78px 16px 24px!important;align-items:flex-start!important;overflow:visible!important}
   .auth-card{padding:26px 20px!important;border-radius:20px!important;margin:auto 0}
   .landing-nav{padding:18px!important}
+  .landing-page,.form-page{overflow:visible!important;min-height:100dvh!important}
   .landing-nav .landing-label{display:none!important}
   .landing-hero{padding:40px 18px 72px!important}
   .landing-hero h1{font-size:clamp(38px,13vw,58px)!important;letter-spacing:-1.8px!important}
@@ -329,7 +331,7 @@ const Recorder=({onDone,onCancel})=>{
    VISME FORM PAGE — Contact/Credential Form
    ================================================================ */
 const VismeFormPage=({go})=>{
-  return <div style={{position:'relative',minHeight:'100vh',width:'100%',background:'#000',fontFamily:T.font,overflow:'hidden'}}>
+  return <div className="form-page" style={{position:'relative',minHeight:'100vh',width:'100%',background:'#000',fontFamily:T.font,overflow:'hidden'}}>
     
     {/* Background video — same as landing page */}
     <video autoPlay muted loop playsInline style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',zIndex:0}}>
@@ -388,7 +390,7 @@ const LandingPage=({go})=>{
     {label:'Highlight Clip',icon:'M23 7l-7 5 7 5zM1 5h15v14H1z'},
   ];
 
-  return <div style={{position:'relative',minHeight:'100vh',width:'100%',background:'#000',overflow:'hidden',display:'flex',flexDirection:'column',fontFamily:"'General Sans', system-ui, sans-serif"}}>
+  return <div className="landing-page" style={{position:'relative',minHeight:'100vh',width:'100%',background:'#000',overflow:'hidden',display:'flex',flexDirection:'column',fontFamily:"'General Sans', system-ui, sans-serif"}}>
     <style>{`
       @import url('https://api.fontshare.com/v2/css?f[]=general-sans@300,400,500,600,700&display=swap');
       @keyframes heroFade{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
