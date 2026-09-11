@@ -67,6 +67,54 @@ input::placeholder{color:rgba(90,90,90,0.5)}select{appearance:none}a{text-decora
 @keyframes pulseDot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.6;transform:scale(0.9)}}
 @keyframes navSlide{from{transform:translateX(-12px);opacity:0}to{transform:translateX(0);opacity:1}}
 @keyframes logoGlow{0%,100%{box-shadow:0 0 0 rgba(255,255,255,0)}50%{box-shadow:0 0 20px rgba(255,255,255,0.08)}}
+@media (max-width:720px){
+  html,body,#root{width:100%;min-width:0;overflow-x:hidden}
+  .auth-shell{padding:78px 16px 24px!important;align-items:flex-start!important}
+  .auth-card{padding:26px 20px!important;border-radius:20px!important;margin:auto 0}
+  .landing-nav{padding:18px!important}
+  .landing-nav .landing-label{display:none!important}
+  .landing-hero{padding:40px 18px 72px!important}
+  .landing-hero h1{font-size:clamp(38px,13vw,58px)!important;letter-spacing:-1.8px!important}
+  .landing-hero p{max-width:310px!important;font-size:14px!important}
+  .landing-feature-list{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important;width:100%!important}
+  .landing-feature-list>div{padding:9px 10px!important;justify-content:center!important}
+  .dashboard-shell{display:block!important}
+  .dashboard-sidebar{position:sticky!important;top:0!important;left:auto!important;bottom:auto!important;width:100%!important;height:auto!important;padding:12px 14px 10px!important;border-right:0!important;border-bottom:1px solid rgba(255,255,255,.08)!important;overflow:visible!important;background:rgba(10,10,10,.96)!important;z-index:30!important}
+  .dashboard-sidebar .sidebar-logo{margin:0!important;padding:0 4px!important}
+  .dashboard-sidebar .sidebar-logo>div:last-child{display:none!important}
+  .dashboard-sidebar nav{display:flex!important;flex-direction:row!important;gap:6px!important;overflow-x:auto!important;padding:0 0 2px!important;scrollbar-width:none}
+  .dashboard-sidebar nav::-webkit-scrollbar{display:none}
+  .dashboard-sidebar nav>div{display:none!important}
+  .dashboard-sidebar nav>button{width:auto!important;min-width:max-content!important;padding:9px 12px!important;font-size:11px!important;border-radius:9px!important;animation:none!important}
+  .dashboard-sidebar .user-card,.dashboard-sidebar>div:last-child{display:none!important}
+  .dashboard-main{margin-left:0!important;padding:24px 16px 40px!important;min-height:calc(100vh - 74px)!important}
+  .dashboard-main h1{font-size:26px!important;letter-spacing:-.8px!important}
+  .dashboard-main div[style*="minmax("]{grid-template-columns:1fr!important}
+  .dashboard-main div[style*="1fr 1fr 1fr"]{grid-template-columns:1fr!important}
+  .dashboard-main div[style*="1fr 1fr"]{grid-template-columns:1fr!important}
+  div[style*="perspective:1200"]{grid-template-columns:1fr!important}
+  .stats-grid{grid-template-columns:1fr 1fr!important;gap:10px!important;margin-bottom:24px!important}
+  .stats-grid>div{padding:18px 14px!important}
+  .activity-item{align-items:flex-start!important;gap:12px!important;padding:13px 14px!important}
+  .activity-item>div:last-child{flex-wrap:wrap!important;justify-content:flex-end!important}
+  .responsive-grid{grid-template-columns:1fr!important;gap:14px!important}
+  .analytics-grid{grid-template-columns:1fr!important;gap:14px!important}
+  .analytics-grid>*{grid-column:auto!important}
+  .summary-stats{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important}
+  .summary-stats>div:last-child{grid-column:span 2}
+  .profile-card{padding:22px!important}
+  .profile-header{align-items:flex-start!important;gap:16px!important;flex-direction:column!important}
+  .profile-info-grid{grid-template-columns:1fr!important}
+  .upload-card{padding:24px 18px!important}
+  .upload-options{grid-template-columns:1fr!important;gap:12px!important}
+  .upload-options>div{padding:28px 20px 34px!important}
+  .toast{left:16px!important;right:16px!important;top:14px!important;max-width:none!important}
+}
+@media (max-width:390px){
+  .dashboard-main{padding-left:12px!important;padding-right:12px!important}
+  .stats-grid{grid-template-columns:1fr!important}
+  .landing-feature-list{grid-template-columns:1fr!important}
+}
 `;
 
 /* Helpers */
@@ -113,7 +161,7 @@ const Btn=({children,onClick,v="primary",disabled,loading,style:ext={},full=true
 const Toast=({message,type="info",onClose})=>{useEffect(()=>{const t=setTimeout(onClose,4000);return()=>clearTimeout(t)},[onClose]);const c={success:T.success,error:T.danger,info:'#fff'};return<div style={{position:'fixed',top:20,right:20,zIndex:9999,background:'rgba(12,12,12,0.96)',backdropFilter:'blur(20px)',border:`1px solid ${c[type]}44`,borderRadius:14,padding:'14px 22px',color:c[type],fontSize:13,fontFamily:T.font,animation:'slideDown .35s ease',maxWidth:380,boxShadow:'0 8px 32px rgba(0,0,0,0.5)'}}>{message}</div>};
 const LogoutModal=({onOk,onNo})=><div style={{position:'fixed',inset:0,zIndex:999,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.75)',backdropFilter:'blur(12px)'}}><Card style={{maxWidth:380,width:'90%',textAlign:'center',padding:36,animation:'scaleIn .25s ease'}} glow><h3 style={{fontSize:18,fontWeight:700,marginBottom:8}}>Sign Out?</h3><p style={{color:T.muted,fontSize:14,marginBottom:28}}>You'll need to sign in again.</p><div style={{display:'flex',gap:12}}><Btn v="secondary" onClick={onNo}>Cancel</Btn><Btn v="danger" onClick={onOk}>Sign Out</Btn></div></Card></div>;
 
-const AuthWrap=({children,title,sub})=><div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:24,position:'relative',overflow:'hidden'}}>
+const AuthWrap=({children,title,sub})=><div className="auth-shell" style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:24,position:'relative',overflow:'hidden'}}>
   {/* Background video */}
   <video autoPlay muted loop playsInline style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',zIndex:0}}>
     <source src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260217_030345_246c0224-10a4-422c-b324-070b7c0eceda.mp4" type="video/mp4"/>
@@ -132,7 +180,7 @@ const AuthWrap=({children,title,sub})=><div style={{minHeight:'100vh',display:'f
   </div>
 
   {/* Glass card */}
-  <div style={{position:'relative',zIndex:10,width:'100%',maxWidth:440,padding:36,borderRadius:24,background:'rgba(10,10,12,0.75)',border:'1px solid rgba(255,255,255,0.08)',backdropFilter:'blur(40px)',WebkitBackdropFilter:'blur(40px)',boxShadow:'0 24px 80px rgba(0,0,0,0.5)',animation:'scaleIn .4s ease both',overflow:'hidden'}}>
+  <div className="auth-card" style={{position:'relative',zIndex:10,width:'100%',maxWidth:440,padding:36,borderRadius:24,background:'rgba(10,10,12,0.75)',border:'1px solid rgba(255,255,255,0.08)',backdropFilter:'blur(40px)',WebkitBackdropFilter:'blur(40px)',boxShadow:'0 24px 80px rgba(0,0,0,0.5)',animation:'scaleIn .4s ease both',overflow:'hidden'}}>
     <div style={{position:'absolute',top:0,left:'15%',right:'15%',height:1,background:'linear-gradient(90deg,transparent,rgba(255,255,255,0.2),transparent)'}}/>
     <div style={{position:'absolute',top:0,left:0,right:0,height:160,background:'radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.04), transparent 70%)',pointerEvents:'none'}}/>
     <div style={{textAlign:'center',marginBottom:28,position:'relative'}}>
@@ -309,7 +357,7 @@ const LandingPage=({go})=>{
     <div style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.55)',zIndex:1}}/>
 
     {/* Logo top-left */}
-    <nav style={{position:'relative',zIndex:10,display:'flex',justifyContent:'flex-start',alignItems:'center',padding:'24px 36px',width:'100%',opacity:vis?1:0,transition:'opacity .8s ease'}}>
+    <nav className="landing-nav" style={{position:'relative',zIndex:10,display:'flex',justifyContent:'flex-start',alignItems:'center',padding:'24px 36px',width:'100%',opacity:vis?1:0,transition:'opacity .8s ease'}}>
       <div style={{display:'flex',alignItems:'center',gap:12}}>
         <div style={{position:'relative',width:40,height:40}}>
           <div style={{position:'absolute',inset:-2,borderRadius:12,background:'conic-gradient(from 0deg, rgba(255,255,255,0.5), rgba(255,255,255,0.05), rgba(255,255,255,0.5))',animation:'logoSpin 6s linear infinite',opacity:0.6}}/>
@@ -320,13 +368,13 @@ const LandingPage=({go})=>{
         </div>
         <div style={{display:'flex',flexDirection:'column',lineHeight:1}}>
           <span style={{fontSize:20,fontWeight:700,color:'#fff',letterSpacing:-1}}>VR<span style={{fontWeight:300,color:'rgba(255,255,255,0.4)'}}>.</span>ai</span>
-          <span style={{fontSize:7.5,fontWeight:500,color:'rgba(255,255,255,0.2)',letterSpacing:2.5,textTransform:'uppercase',marginTop:2}}>Video Resume</span>
+          <span className="landing-label" style={{fontSize:7.5,fontWeight:500,color:'rgba(255,255,255,0.2)',letterSpacing:2.5,textTransform:'uppercase',marginTop:2}}>Video Resume</span>
         </div>
       </div>
     </nav>
 
     {/* Hero — pushed lower with flex-end + generous bottom padding */}
-    <div style={{position:'relative',zIndex:10,flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center',padding:'60px 24px 100px',gap:0}}>
+    <div className="landing-hero" style={{position:'relative',zIndex:10,flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center',padding:'60px 24px 100px',gap:0}}>
 
       {/* Heading */}
       <h1 style={{fontSize:'clamp(42px, 7vw, 72px)',fontWeight:600,lineHeight:1.08,maxWidth:700,letterSpacing:-2.5,margin:0,background:'linear-gradient(144.5deg, #ffffff 28%, rgba(255,255,255,0.2) 100%)',WebkitBackgroundClip:'text',backgroundClip:'text',WebkitTextFillColor:'transparent',color:'transparent',animation:'heroFade 1s cubic-bezier(0.23,1,0.32,1) 0.2s both'}}>Your Voice.<br/>Your Resume.</h1>
@@ -349,7 +397,7 @@ const LandingPage=({go})=>{
       </div>
 
       {/* Feature pills row */}
-      <div style={{display:'flex',gap:12,justifyContent:'center',flexWrap:'wrap'}}>
+      <div className="landing-feature-list" style={{display:'flex',gap:12,justifyContent:'center',flexWrap:'wrap'}}>
         {pills.map((p,i)=>{
           const[h,setH]=useState(false);
           return <div key={p.label} onMouseEnter={()=>setH(true)} onMouseLeave={()=>setH(false)} style={{
@@ -447,8 +495,8 @@ const Dash=({go,show,session,profile,setProfile,subs,onLogout,ls,tab,setTab,selS
     {id:'sett',l:'Settings',paths:['M12 15a3 3 0 100-6 3 3 0 000 6z','M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z']},
   ];
 
-  return<div style={{display:'flex',minHeight:'100vh',background:T.bg,position:'relative',zIndex:2}}>
-    <aside style={{
+  return<div className="dashboard-shell" style={{display:'flex',minHeight:'100vh',background:T.bg,position:'relative',zIndex:2}}>
+    <aside className="dashboard-sidebar" style={{
       width:260,background:'#0a0a0a',borderRight:`1px solid ${T.border}`,
       padding:'28px 18px 20px',display:'flex',flexDirection:'column',
       position:'fixed',top:0,left:0,bottom:0,zIndex:20,
@@ -460,7 +508,7 @@ const Dash=({go,show,session,profile,setProfile,subs,onLogout,ls,tab,setTab,selS
       <div style={{position:'absolute',inset:0,pointerEvents:'none',zIndex:0,backgroundImage:'linear-gradient(rgba(255,255,255,0.008) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.008) 1px,transparent 1px)',backgroundSize:'40px 40px',maskImage:'radial-gradient(ellipse 60% 80% at 50% 50%,rgba(0,0,0,0.4),transparent)',WebkitMaskImage:'radial-gradient(ellipse 60% 80% at 50% 50%,rgba(0,0,0,0.4),transparent)'}}/>
 
       {/* Logo */}
-      <div style={{display:'flex',alignItems:'center',gap:12,padding:'0 8px',marginBottom:40,position:'relative',zIndex:2}}>
+      <div className="sidebar-logo" style={{display:'flex',alignItems:'center',gap:12,padding:'0 8px',marginBottom:40,position:'relative',zIndex:2}}>
         <div style={{width:42,height:42,borderRadius:12,background:'linear-gradient(135deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))',border:`1px solid ${T.border}`,display:'flex',alignItems:'center',justifyContent:'center',animation:'logoGlow 4s ease-in-out infinite'}}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
         </div>
@@ -494,7 +542,7 @@ const Dash=({go,show,session,profile,setProfile,subs,onLogout,ls,tab,setTab,selS
       <div style={{marginTop:20,marginBottom:16,height:1,background:`linear-gradient(90deg,transparent,${T.border},transparent)`,position:'relative',zIndex:2}}/>
       <UserCard profile={profile} session={session} onLogout={onLogout}/>
     </aside>
-    <main style={{flex:1,marginLeft:260,padding:'32px 44px',minHeight:'100vh'}}>
+    <main className="dashboard-main" style={{flex:1,marginLeft:260,padding:'32px 44px',minHeight:'100vh'}}>
       {tab==='overview'&&<OvTab subs={subs} comp={comp} go={go} profile={profile} show={show} setTab={setTab} setSelSub={setSelSub}/>}
       {tab==='submissions'&&<SubTab subs={subs} show={show} ls={ls} session={session}/>}
       {tab==='resumes'&&<ResTab subs={comp}/>}
@@ -510,7 +558,7 @@ const Dash=({go,show,session,profile,setProfile,subs,onLogout,ls,tab,setTab,selS
 const UserCard=({profile,session,onLogout})=>{
   const[hov,setHov]=useState(false);
   const[btnHov,setBtnHov]=useState(false);
-  return <div style={{position:'relative',zIndex:2,padding:14,borderRadius:16,background:hov?'linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))':'linear-gradient(135deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))',border:`1px solid ${hov?'rgba(255,255,255,0.12)':T.border}`,transition:'all 0.4s',overflow:'hidden'}} onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}>
+  return <div className="user-card" style={{position:'relative',zIndex:2,padding:14,borderRadius:16,background:hov?'linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))':'linear-gradient(135deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))',border:`1px solid ${hov?'rgba(255,255,255,0.12)':T.border}`,transition:'all 0.4s',overflow:'hidden'}} onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}>
     {/* Top shine line */}
     <div style={{position:'absolute',top:0,left:20,right:20,height:1,background:'linear-gradient(90deg,transparent,rgba(255,255,255,0.15),transparent)',opacity:hov?1:0,transition:'opacity 0.4s'}}/>
     <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:14}}>
@@ -684,7 +732,7 @@ const OvTab=({subs,comp,go,profile,show,setTab,setSelSub})=>(
       </div>
 
       {/* 3D Stat Cards */}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:18,marginBottom:40,perspective:1200}}>
+      <div className="stats-grid" style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:18,marginBottom:40,perspective:1200}}>
         <TiltCard3D icon="📹" label="Total Uploads" value={subs.length} delay={0.1} sub="all time" glowColor="rgba(255,255,255,0.06)"/>
         <TiltCard3D icon="📄" label="Resumes" value={comp.length} delay={0.2} sub="completed" glowColor="rgba(74,222,128,0.06)"/>
         <TiltCard3D icon="🎬" label="Clips" value={comp.filter(s=>s.highlight_clip_url).length} delay={0.3} sub="ready" glowColor="rgba(167,139,250,0.06)"/>
@@ -719,7 +767,7 @@ const OvTab=({subs,comp,go,profile,show,setTab,setSelSub})=>(
 const ActivityItem = ({s, i, setTab, setSelSub}) => {
   const [hov, setHov] = useState(false);
   return (
-    <div onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} style={{
+    <div className="activity-item" onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} style={{
       display:'flex', justifyContent:'space-between', alignItems:'center',
       padding:'16px 22px', borderRadius:16,
       background:T.card, border:`1px solid ${hov?'rgba(255,255,255,0.1)':T.border}`,
@@ -767,7 +815,7 @@ const ActivityItem = ({s, i, setTab, setSelSub}) => {
 const SubTab=({subs,show,ls,session})=>{const del=async id=>{if(!confirm('Delete?'))return;try{await db.deleteSubmission(id);show("Deleted","success");await ls(session.user.id)}catch(e){show(e.message,"error")}};return<div><div style={{marginBottom:28}}><h1 style={{fontSize:26,fontWeight:800}}>Submissions</h1><p style={{color:T.muted,fontSize:14,marginTop:4}}>Your full-length recorded videos</p></div>{subs.length===0?<Card animate style={{textAlign:'center',padding:56}}><p style={{color:T.dim}}>None yet.</p></Card>:<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(380px,1fr))',gap:18}}>{subs.map((s,i)=><Card key={s.id} animate delay={i*0.08} style={{padding:0,overflow:'hidden'}}><div style={{background:'#000',position:'relative',overflow:'hidden'}}>{s.video_url?<video src={s.video_url} controls controlsList="nodownload" style={{width:'100%',display:'block',maxHeight:260}} preload="metadata"/>:<div style={{height:200,background:'linear-gradient(135deg,#111,#0b0b0b)',display:'flex',alignItems:'center',justifyContent:'center'}}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="1.5"><polygon points="23 7 16 12 23 17"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div>}<div style={{position:'absolute',top:12,right:12}}><span style={{padding:'4px 12px',borderRadius:8,fontSize:10.5,fontWeight:700,background:s.status==="completed"?'rgba(74,222,128,0.15)':s.status==="failed"?'rgba(248,113,113,0.15)':'rgba(250,204,21,0.15)',color:s.status==="completed"?T.success:s.status==="failed"?T.danger:T.warning,textTransform:'uppercase',letterSpacing:.5,backdropFilter:'blur(6px)'}}>{s.status}</span></div>{s.confidence_score>0&&<div style={{position:'absolute',top:12,left:12,padding:'4px 10px',borderRadius:8,background:'rgba(0,0,0,0.7)',backdropFilter:'blur(6px)',fontSize:12,fontWeight:700,color:'#fff'}}>{Math.round(s.confidence_score)}%</div>}<div style={{position:'absolute',bottom:12,left:12,padding:'3px 10px',borderRadius:6,background:'rgba(0,0,0,0.7)',backdropFilter:'blur(6px)',fontSize:10,fontWeight:600,color:'rgba(255,255,255,0.6)',letterSpacing:0.5}}>FULL VIDEO</div></div><div style={{padding:'18px 22px'}}><div style={{fontWeight:700,fontSize:15,marginBottom:4}}>{s.video_filename||"Video"}</div><div style={{fontSize:12,color:T.dim,marginBottom:14,display:'flex',alignItems:'center',gap:8}}>{new Date(s.created_at).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}{s.upload_method&&<span style={{padding:'2px 8px',borderRadius:5,fontSize:10,background:'rgba(255,255,255,0.03)',border:`1px solid ${T.border}`,color:T.muted}}>{s.upload_method==='record'?'Recorded':'Uploaded'}</span>}</div><div style={{display:'flex',gap:8,flexWrap:'wrap'}}>{s.resume_pdf_url&&<a href={s.resume_pdf_url} target="_blank" rel="noopener" style={{padding:'8px 16px',borderRadius:8,fontSize:12,fontWeight:600,background:T.gradient,color:'#0b0b0b',textDecoration:'none'}}>Resume</a>}{s.video_url&&<a href={s.video_url} target="_blank" rel="noopener" style={{padding:'8px 16px',borderRadius:8,fontSize:12,fontWeight:600,background:'rgba(255,255,255,0.04)',color:'#fff',border:`1px solid ${T.border}`,textDecoration:'none',transition:'all 0.3s'}} onMouseEnter={e=>e.target.style.background='rgba(255,255,255,0.08)'} onMouseLeave={e=>e.target.style.background='rgba(255,255,255,0.04)'}>Open Video</a>}<button onClick={()=>del(s.id)} style={{padding:'8px 14px',borderRadius:8,fontSize:12,fontWeight:600,background:'rgba(248,113,113,0.04)',color:T.danger,border:'1px solid rgba(248,113,113,0.06)',cursor:'pointer',fontFamily:T.font,marginLeft:'auto'}}>Delete</button></div></div></Card>)}</div>}</div>};
 
 /* Resumes */
-const ResTab=({subs})=>{const rs=subs.filter(s=>s.resume_pdf_url);return<div><div style={{marginBottom:28}}><h1 style={{fontSize:26,fontWeight:800}}>Resumes</h1><p style={{color:T.muted,fontSize:14,marginTop:4}}>ATS-optimized PDF resumes</p></div>{rs.length===0?<Card animate style={{textAlign:'center',padding:56}}><p style={{color:T.dim}}>No resumes yet.</p></Card>:<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(340px,1fr))',gap:24}}>{rs.map((s,i)=><ResumeCard3D key={s.id} s={s} i={i}/>)}</div>}</div>};
+const ResTab=({subs})=>{const rs=subs.filter(s=>s.resume_pdf_url);return<div><div style={{marginBottom:28}}><h1 style={{fontSize:26,fontWeight:800}}>Resumes</h1><p style={{color:T.muted,fontSize:14,marginTop:4}}>ATS-optimized PDF resumes</p></div>{rs.length===0?<Card animate style={{textAlign:'center',padding:56}}><p style={{color:T.dim}}>No resumes yet.</p></Card>:<div className="responsive-grid" style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(340px,1fr))',gap:24}}>{rs.map((s,i)=><ResumeCard3D key={s.id} s={s} i={i}/>)}</div>}</div>};
 
 /* Share Row — WhatsApp, LinkedIn, Copy, Email */
 const ShareRow=({url,title})=>{
