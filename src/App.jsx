@@ -111,12 +111,12 @@ input::placeholder{color:rgba(90,90,90,0.5)}select{appearance:none}a{text-decora
   .upload-options>div{padding:28px 20px 34px!important}
   .upload-shell{padding:84px 16px 24px!important;align-items:flex-start!important}
   .upload-card{padding:24px 18px!important}
-  .recorder-shell{position:fixed!important;inset:0!important;z-index:100!important;background:#000!important;display:flex!important;flex-direction:column!important;justify-content:flex-end!important;padding:0!important}
+  .recorder-shell{position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;z-index:100!important;background:#000!important;display:block!important;padding:0!important;overflow:hidden!important}
   .recorder-preview{position:absolute!important;inset:0!important;width:100vw!important;height:100dvh!important;aspect-ratio:auto!important;border-radius:0!important;margin:0!important}
   .recorder-preview>video{width:100%!important;height:100%!important;object-fit:cover!important;object-position:center!important}
-  .recorder-controls{position:fixed!important;left:0!important;right:0!important;bottom:0!important;z-index:102!important;display:flex!important;gap:10px!important;width:100%!important;padding:22px 16px max(30px,env(safe-area-inset-bottom))!important;background:linear-gradient(transparent,rgba(0,0,0,.94) 38%)!important}
+  .recorder-controls{position:absolute!important;left:0!important;right:0!important;bottom:0!important;z-index:102!important;display:flex!important;gap:10px!important;width:100%!important;padding:22px 16px max(30px,env(safe-area-inset-bottom))!important;background:linear-gradient(transparent,rgba(0,0,0,.94) 38%)!important}
   .recorder-controls>button{flex:1!important;min-width:0!important}
-  .camera-switch{position:absolute!important;top:18px!important;right:16px!important;z-index:3!important;width:44px!important;height:44px!important;padding:0!important;border-radius:50%!important;border:1px solid rgba(255,255,255,.22)!important;background:rgba(0,0,0,.58)!important;color:#fff!important;display:flex!important;align-items:center!important;justify-content:center!important;backdrop-filter:blur(12px)!important}
+  .camera-switch{position:absolute!important;top:72px!important;right:20px!important;z-index:103!important;width:44px!important;height:44px!important;padding:0!important;border-radius:50%!important;border:1px solid rgba(255,255,255,.22)!important;background:rgba(0,0,0,.58)!important;color:#fff!important;display:flex!important;align-items:center!important;justify-content:center!important;backdrop-filter:blur(12px)!important}
   .toast{left:16px!important;right:16px!important;top:14px!important;max-width:none!important}
 }
 @media (max-width:390px){
@@ -291,7 +291,7 @@ const Recorder=({onDone,onCancel})=>{
   const start=useCallback(async()=>{
     try{
       sr.current?.getTracks().forEach(t=>t.stop());
-      const s=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1920},height:{ideal:1080},facingMode:{ideal:facing}},audio:true});
+      const s=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1920},height:{ideal:1080},facingMode:{exact:facing}},audio:true});
       sr.current=s;
       if(vr.current)vr.current.srcObject=s;
       sRdy(true);
