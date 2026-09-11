@@ -111,6 +111,11 @@ input::placeholder{color:rgba(90,90,90,0.5)}select{appearance:none}a{text-decora
   .upload-options>div{padding:28px 20px 34px!important}
   .upload-shell{padding:84px 16px 24px!important;align-items:flex-start!important}
   .upload-card{padding:24px 18px!important}
+  .recorder-shell{position:fixed!important;inset:0!important;z-index:100!important;background:#000!important;display:flex!important;flex-direction:column!important;justify-content:flex-end!important;padding:0!important}
+  .recorder-preview{position:absolute!important;inset:0!important;width:100%!important;height:100dvh!important;aspect-ratio:auto!important;border-radius:0!important;margin:0!important}
+  .recorder-controls{position:relative!important;z-index:2!important;display:flex!important;gap:10px!important;width:100%!important;padding:22px 16px 30px!important;background:linear-gradient(transparent,rgba(0,0,0,.92) 36%)!important}
+  .recorder-controls>button{flex:1!important;min-width:0!important}
+  .camera-switch{position:absolute!important;top:18px!important;right:16px!important;z-index:3!important;padding:9px 13px!important;border-radius:20px!important;border:1px solid rgba(255,255,255,.2)!important;background:rgba(0,0,0,.55)!important;color:#fff!important;font:600 12px ${T.font}!important;backdrop-filter:blur(12px)!important}
   .toast{left:16px!important;right:16px!important;top:14px!important;max-width:none!important}
 }
 @media (max-width:390px){
@@ -279,7 +284,37 @@ const FaceScan=({stage,prog=0})=>{
 };
 
 /* Recorder */
-const Recorder=({onDone,onCancel})=>{const vr=useRef(),mr=useRef(),sr=useRef(),ch=useRef([]),tr=useRef();const[rec,sR]=useState(false),[cd,sC]=useState(null),[el,sE]=useState(0),[rdy,sRdy]=useState(false),[err,sErr]=useState(null),[pv,sPv]=useState(null);const start=useCallback(async()=>{try{const s=await navigator.mediaDevices.getUserMedia({video:{width:1280,height:720,facingMode:"user"},audio:true});sr.current=s;if(vr.current)vr.current.srcObject=s;sRdy(true)}catch{sErr("Camera denied.")}},[]);useEffect(()=>{start();return()=>{sr.current?.getTracks().forEach(t=>t.stop());clearInterval(tr.current)}},[start]);const scd=()=>{sC(3);let c=3;const iv=setInterval(()=>{c--;if(c<=0){clearInterval(iv);sC(null);br()}else sC(c)},1000)};const br=()=>{ch.current=[];const mime=MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")?"video/webm;codecs=vp9,opus":"video/webm";const m=new MediaRecorder(sr.current,{mimeType:mime});m.ondataavailable=e=>{if(e.data.size>0)ch.current.push(e.data)};m.onstop=()=>{sPv(new Blob(ch.current,{type:"video/webm"}));sr.current?.getTracks().forEach(t=>t.stop())};mr.current=m;m.start(100);sR(true);sE(0);tr.current=setInterval(()=>sE(p=>{if(p>=300){sp();return 300}return p+1}),1000)};const sp=()=>{clearInterval(tr.current);mr.current?.stop();sR(false)};const fm=s=>`${Math.floor(s/60).toString().padStart(2,"0")}:${(s%60).toString().padStart(2,"0")}`;if(err)return<Card style={{textAlign:'center',padding:40}}><p style={{color:T.danger,marginBottom:20}}>{err}</p><Btn v="secondary" onClick={onCancel}>Back</Btn></Card>;return<div><div style={{borderRadius:14,overflow:'hidden',background:'#000',marginBottom:16,position:'relative',aspectRatio:'16/9'}}>{pv?<video src={URL.createObjectURL(pv)} controls style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>:<video ref={vr} autoPlay muted playsInline style={{width:'100%',height:'100%',objectFit:'cover',display:'block',transform:'scaleX(-1)'}}/>}{cd!==null&&<div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.6)'}}><span style={{fontSize:64,fontWeight:800,color:'#fff'}}>{cd}</span></div>}{rec&&<div style={{position:'absolute',top:12,left:12,display:'flex',alignItems:'center',gap:6,background:'rgba(0,0,0,0.7)',borderRadius:20,padding:'5px 14px'}}><div style={{width:8,height:8,borderRadius:'50%',background:T.danger,animation:'pulse 1s ease infinite'}}/><span style={{color:'#fff',fontSize:12,fontWeight:600}}>REC {fm(el)}</span></div>}{rec&&<div style={{position:'absolute',bottom:0,left:0,right:0,height:3,background:'rgba(255,255,255,0.06)'}}><div style={{height:'100%',background:T.gradient,width:`${(el/300)*100}%`,transition:'width 1s'}}/></div>}</div>{pv?<div style={{display:'flex',gap:10}}><Btn v="secondary" onClick={()=>{sPv(null);sE(0);start()}}>Retake</Btn><Btn onClick={()=>onDone(new File([pv],`rec_${Date.now()}.webm`,{type:"video/webm"}))}>Use This</Btn></div>:rec?<Btn v="danger" onClick={sp}>Stop</Btn>:rdy?<div style={{display:'flex',gap:10}}><Btn v="secondary" onClick={onCancel} full={false}>Cancel</Btn><Btn onClick={scd}>Start Recording</Btn></div>:<div style={{textAlign:'center',padding:20}}><div style={{width:20,height:20,border:`2px solid ${T.border}`,borderTopColor:'#fff',borderRadius:'50%',animation:'spin .8s linear infinite',margin:'0 auto'}}/></div>}</div>};
+const Recorder=({onDone,onCancel})=>{
+  const vr=useRef(),mr=useRef(),sr=useRef(),ch=useRef([]),tr=useRef();
+  const[rec,sR]=useState(false),[cd,sC]=useState(null),[el,sE]=useState(0),[rdy,sRdy]=useState(false),[err,sErr]=useState(null),[pv,sPv]=useState(null),[facing,setFacing]=useState('user');
+  const start=useCallback(async()=>{
+    try{
+      sr.current?.getTracks().forEach(t=>t.stop());
+      const s=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1920},height:{ideal:1080},facingMode:{ideal:facing}},audio:true});
+      sr.current=s;
+      if(vr.current)vr.current.srcObject=s;
+      sRdy(true);
+      sErr(null);
+    }catch{sErr("Camera denied or unavailable.")}
+  },[facing]);
+  useEffect(()=>{start();return()=>{sr.current?.getTracks().forEach(t=>t.stop());clearInterval(tr.current)}},[start]);
+  const switchCamera=()=>{if(!rec&&!pv){setRdy(false);setFacing(mode=>mode==='user'?'environment':'user')}};
+  const scd=()=>{sC(3);let c=3;const iv=setInterval(()=>{c--;if(c<=0){clearInterval(iv);sC(null);br()}else sC(c)},1000)};
+  const br=()=>{ch.current=[];const mime=MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")?"video/webm;codecs=vp9,opus":"video/webm";const m=new MediaRecorder(sr.current,{mimeType:mime});m.ondataavailable=e=>{if(e.data.size>0)ch.current.push(e.data)};m.onstop=()=>{sPv(new Blob(ch.current,{type:"video/webm"}));sr.current?.getTracks().forEach(t=>t.stop())};mr.current=m;m.start(100);sR(true);sE(0);tr.current=setInterval(()=>sE(p=>{if(p>=300){sp();return 300}return p+1}),1000)};
+  const sp=()=>{clearInterval(tr.current);mr.current?.stop();sR(false)};
+  const fm=s=>`${Math.floor(s/60).toString().padStart(2,"0")}:${(s%60).toString().padStart(2,"0")}`;
+  if(err)return<Card style={{textAlign:'center',padding:40}}><p style={{color:T.danger,marginBottom:20}}>{err}</p><Btn v="secondary" onClick={onCancel}>Back</Btn></Card>;
+  return <div className="recorder-shell">
+    <div className="recorder-preview" style={{borderRadius:14,overflow:'hidden',background:'#000',marginBottom:16,position:'relative',aspectRatio:'16/9'}}>
+      {pv?<video src={URL.createObjectURL(pv)} controls style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>:<video ref={vr} autoPlay muted playsInline style={{width:'100%',height:'100%',objectFit:'cover',display:'block',transform:facing==='user'?'scaleX(-1)':'none'}}/>}
+      {!pv&&!rec&&rdy&&<button className="camera-switch" onClick={switchCamera} type="button" aria-label="Switch camera">{facing==='user'?'Back camera':'Front camera'}</button>}
+      {cd!==null&&<div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.6)'}}><span style={{fontSize:64,fontWeight:800,color:'#fff'}}>{cd}</span></div>}
+      {rec&&<div style={{position:'absolute',top:12,left:12,display:'flex',alignItems:'center',gap:6,background:'rgba(0,0,0,0.7)',borderRadius:20,padding:'5px 14px'}}><div style={{width:8,height:8,borderRadius:'50%',background:T.danger,animation:'pulse 1s ease infinite'}}/><span style={{color:'#fff',fontSize:12,fontWeight:600}}>REC {fm(el)}</span></div>}
+      {rec&&<div style={{position:'absolute',bottom:0,left:0,right:0,height:3,background:'rgba(255,255,255,0.06)'}}><div style={{height:'100%',background:T.gradient,width:`${(el/300)*100}%`,transition:'width 1s'}}/></div>}
+    </div>
+    <div className="recorder-controls">{pv?<><Btn v="secondary" onClick={()=>{sPv(null);sE(0);start()}}>Retake</Btn><Btn onClick={()=>onDone(new File([pv],`rec_${Date.now()}.webm`,{type:"video/webm"}))}>Use This</Btn></>:rec?<Btn v="danger" onClick={sp}>Stop</Btn>:rdy?<><Btn v="secondary" onClick={onCancel} full={false}>Cancel</Btn><Btn onClick={scd}>Start Recording</Btn></>:<div style={{textAlign:'center',padding:20,width:'100%'}}><div style={{width:20,height:20,border:`2px solid ${T.border}`,borderTopColor:'#fff',borderRadius:'50%',animation:'spin .8s linear infinite',margin:'0 auto'}}/></div>}</div>
+  </div>;
+};
 
 /* ================================================================
    VISME FORM PAGE — Contact/Credential Form
