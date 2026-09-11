@@ -56,7 +56,7 @@ input::placeholder{color:rgba(90,90,90,0.5)}select{appearance:none}a{text-decora
 @keyframes borderTrace{0%{background-position:0% 50%}100%{background-position:200% 50%}}
 .lift{will-change:transform}
 .recorder-shell{width:100%;max-width:520px;margin:0 auto;touch-action:none;overscroll-behavior:none}
-.camera-switch,.camera-close{display:none}
+.camera-close{display:none}
 .lift:hover{transform:translateY(-5px);border-color:rgba(255,255,255,0.14)!important;box-shadow:0 18px 50px rgba(0,0,0,.45)}
 .sweepbar{position:relative;overflow:hidden}
 .sweepbar::after{content:'';position:absolute;inset:0;width:30%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.45),transparent);animation:sweep 2.6s ease-in-out infinite;animation-delay:1.4s}
@@ -119,7 +119,6 @@ input::placeholder{color:rgba(90,90,90,0.5)}select{appearance:none}a{text-decora
   .recorder-preview>video{width:100%!important;height:100%!important;object-fit:cover!important;object-position:center!important}
   .recorder-controls{position:absolute!important;left:0!important;right:0!important;bottom:0!important;z-index:102!important;display:flex!important;gap:10px!important;width:100%!important;padding:22px 16px max(30px,env(safe-area-inset-bottom))!important;background:linear-gradient(transparent,rgba(0,0,0,.94) 38%)!important}
   .recorder-controls>button{flex:1!important;min-width:0!important}
-  .camera-switch{position:absolute!important;top:72px!important;right:20px!important;z-index:103!important;width:44px!important;height:44px!important;padding:0!important;border-radius:50%!important;border:1px solid rgba(255,255,255,.22)!important;background:rgba(0,0,0,.58)!important;color:#fff!important;display:flex!important;align-items:center!important;justify-content:center!important;backdrop-filter:blur(12px)!important}
   .camera-close{position:absolute!important;top:72px!important;left:20px!important;z-index:103!important;width:42px!important;height:42px!important;border:1px solid rgba(255,255,255,.2)!important;border-radius:50%!important;background:rgba(0,0,0,.58)!important;color:#fff!important;display:flex!important;align-items:center!important;justify-content:center!important;font:300 28px/1 ${T.font}!important}
   .recorder-error{display:flex!important;align-items:center!important;justify-content:center!important;padding:24px!important;text-align:center!important}
   .toast{left:16px!important;right:16px!important;top:14px!important;max-width:none!important}
@@ -291,68 +290,32 @@ const FaceScan=({stage,prog=0})=>{
 
 /* Recorder */
 const Recorder=({onDone,onCancel})=>{
-  const vr=useRef(),mr=useRef(),sr=useRef(),ch=useRef([]),tr=useRef(),pvUrl=useRef(),deviceId=useRef(),alive=useRef(true),discardRecording=useRef(false);
-  const[rec,sR]=useState(false),[cd,sC]=useState(null),[el,sE]=useState(0),[rdy,sRdy]=useState(false),[err,sErr]=useState(null),[pv,sPv]=useState(null),[facing,setFacing]=useState('user'),[hasBack,setHasBack]=useState(true),[switching,sSwitching]=useState(false);
+  const vr=useRef(),mr=useRef(),sr=useRef(),ch=useRef([]),tr=useRef(),pvUrl=useRef(),alive=useRef(true);
+  const[rec,sR]=useState(false),[cd,sC]=useState(null),[el,sE]=useState(0),[rdy,sRdy]=useState(false),[err,sErr]=useState(null),[pv,sPv]=useState(null);
   const stopCamera=()=>{sr.current?.getTracks().forEach(track=>track.stop());sr.current=null;if(vr.current)vr.current.srcObject=null;sRdy(false)};
-  const startCamera=async(mode='user')=>{
-    const previousDeviceId=deviceId.current;
+  const startCamera=async()=>{
     stopCamera();
-    const rearLabel=device=>/back|rear|environment|world/i.test(device.label||'');
-    const frontLabel=device=>/front|user|facetime|selfie/i.test(device.label||'');
-    const attachStream=async stream=>{
-      if(!alive.current){stream.getTracks().forEach(track=>track.stop());return false;}
-      const track=stream.getVideoTracks()[0];
-      const settings=track?.getSettings?.()||{};
-      if(mode==='environment'&&(settings.facingMode==='user'||frontLabel(track))){stream.getTracks().forEach(item=>item.stop());throw new Error('Requested rear camera was not returned');}
-      sr.current=stream;deviceId.current=settings.deviceId;
-      if(vr.current){vr.current.srcObject=stream;await vr.current.play().catch(()=>{});}
-      const devices=await navigator.mediaDevices.enumerateDevices().catch(()=>[]);
-      const cameras=devices.filter(device=>device.kind==='videoinput');
-      console.debug('[camera] active track', {mode, label:track?.label, settings, inputs:cameras.length});
-      setHasBack(cameras.length>1||settings.facingMode==='environment'||mode==='environment');
-      sRdy(true);sErr(null);return true;
-    };
     try{
-      let stream;
-      try{
-        stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1920},height:{ideal:1080},facingMode:{exact:mode}},audio:true});
-      }catch(exactError){
-        console.warn('[camera] exact facingMode failed', exactError.name, exactError.message);
-        stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1920},height:{ideal:1080},facingMode:mode},audio:true});
-      }
-      return attachStream(stream);
+      const stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1920},height:{ideal:1080},facingMode:'user'},audio:true});
+      if(!alive.current){stream.getTracks().forEach(track=>track.stop());return false;}
+      sr.current=stream;
+      if(vr.current){vr.current.srcObject=stream;await vr.current.play().catch(()=>{});}
+      sRdy(true);sErr(null);return true;
     }catch(error){
-      if(mode==='environment'||mode==='user'){
-        try{
-          const devices=await navigator.mediaDevices.enumerateDevices();
-          const cameras=devices.filter(device=>device.kind==='videoinput');
-          console.debug('[camera] available video devices', cameras);
-          const targetLabel=mode==='environment'?rearLabel:frontLabel;
-          const fallback=cameras.find(device=>device.deviceId!==previousDeviceId&&targetLabel(device))||cameras.find(device=>device.deviceId!==previousDeviceId);
-          if(fallback){
-            const stream=await navigator.mediaDevices.getUserMedia({video:{deviceId:{exact:fallback.deviceId}},audio:true});
-            return attachStream(stream);
-          }
-        }catch(fallbackError){console.warn('[camera] deviceId fallback failed', fallbackError.name, fallbackError.message)}
-        if(mode==='environment'){setHasBack(false);sErr('Back camera is not available on this device.');}
-        else{sErr('Camera access is required to record your video resume.');}
-      }else{sErr(error.name==='NotAllowedError'||error.name==='SecurityError'?'Camera permission is required to record your video resume.':'Camera access is required to record your video resume.');}
+      sErr(error.name==='NotAllowedError'||error.name==='SecurityError'?'Camera permission is required to record your video resume.':'Camera access is required to record your video resume.');
       sRdy(false);return false;
     }
   };
-  useEffect(()=>{alive.current=true;const bodyStyle=document.body.style.cssText;const htmlStyle=document.documentElement.style.cssText;document.body.style.overflow='hidden';document.documentElement.style.overflow='hidden';startCamera('user');return()=>{alive.current=false;clearInterval(tr.current);mr.current?.stop();stopCamera();if(pvUrl.current)URL.revokeObjectURL(pvUrl.current);document.body.style.cssText=bodyStyle;document.documentElement.style.cssText=htmlStyle}},[]);
-  const switchCamera=async()=>{if(pv||switching||!hasBack)return;const wasRecording=rec;sSwitching(true);if(wasRecording){discardRecording.current=true;await stopRecordingForSwitch()}const next=facing==='user'?'environment':'user';setRdy(false);const ok=await startCamera(next);if(ok){setFacing(next);if(wasRecording)startRecording()}sSwitching(false)};
+  useEffect(()=>{alive.current=true;const bodyStyle=document.body.style.cssText;const htmlStyle=document.documentElement.style.cssText;document.body.style.overflow='hidden';document.documentElement.style.overflow='hidden';startCamera();return()=>{alive.current=false;clearInterval(tr.current);mr.current?.stop();stopCamera();if(pvUrl.current)URL.revokeObjectURL(pvUrl.current);document.body.style.cssText=bodyStyle;document.documentElement.style.cssText=htmlStyle}},[]);
   const scd=()=>{sC(3);let c=3;const iv=setInterval(()=>{c--;if(c<=0){clearInterval(iv);sC(null);startRecording()}else sC(c)},1000)};
-  const startRecording=()=>{if(!sr.current)return;ch.current=[];const mime=MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")?"video/webm;codecs=vp9,opus":"video/webm";const recorder=new MediaRecorder(sr.current,{mimeType:mime});recorder.ondataavailable=e=>{if(e.data.size>0)ch.current.push(e.data)};recorder.onstop=()=>{const blob=new Blob(ch.current,{type:'video/webm'});stopCamera();if(discardRecording.current){discardRecording.current=false;return}pvUrl.current=URL.createObjectURL(blob);sPv(blob)};mr.current=recorder;recorder.start(100);sR(true);sE(0);tr.current=setInterval(()=>sE(p=>{if(p>=300){stopRecording();return 300}return p+1}),1000)};
-  const stopRecordingForSwitch=()=>new Promise(resolve=>{clearInterval(tr.current);const recorder=mr.current;if(!recorder||recorder.state==='inactive'){sR(false);resolve();return}const previous=recorder.onstop;recorder.onstop=event=>{previous?.(event);resolve()};recorder.stop();sR(false)});
+  const startRecording=()=>{if(!sr.current)return;ch.current=[];const mime=MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")?"video/webm;codecs=vp9,opus":"video/webm";const recorder=new MediaRecorder(sr.current,{mimeType:mime});recorder.ondataavailable=e=>{if(e.data.size>0)ch.current.push(e.data)};recorder.onstop=()=>{const blob=new Blob(ch.current,{type:'video/webm'});stopCamera();pvUrl.current=URL.createObjectURL(blob);sPv(blob)};mr.current=recorder;recorder.start(100);sR(true);sE(0);tr.current=setInterval(()=>sE(p=>{if(p>=300){stopRecording();return 300}return p+1}),1000)};
   const stopRecording=()=>{clearInterval(tr.current);if(mr.current?.state==='recording')mr.current.stop();sR(false)};
-  const retake=()=>{if(pvUrl.current)URL.revokeObjectURL(pvUrl.current);pvUrl.current=null;sPv(null);sE(0);startCamera(facing)};
+  const retake=()=>{if(pvUrl.current)URL.revokeObjectURL(pvUrl.current);pvUrl.current=null;sPv(null);sE(0);startCamera()};
   const fm=s=>`${Math.floor(s/60).toString().padStart(2,"0")}:${(s%60).toString().padStart(2,"0")}`;
-  if(err)return createPortal(<div className="recorder-shell recorder-error"><div><p style={{color:T.danger,marginBottom:20}}>{err}</p><Btn onClick={()=>{sErr(null);startCamera(facing)}}>Allow Camera Access</Btn><Btn v="secondary" onClick={onCancel}>Back</Btn></div></div>,document.body);
+  if(err)return createPortal(<div className="recorder-shell recorder-error"><div><p style={{color:T.danger,marginBottom:20}}>{err}</p><Btn onClick={()=>{sErr(null);startCamera()}}>Allow Camera Access</Btn><Btn v="secondary" onClick={onCancel}>Back</Btn></div></div>,document.body);
   return createPortal(<div className="recorder-shell">
     <div className="recorder-preview" style={{borderRadius:14,overflow:'hidden',background:'#000',marginBottom:16,position:'relative',aspectRatio:'16/9'}}>
-      {pv?<video src={URL.createObjectURL(pv)} controls style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>:<video ref={vr} autoPlay muted playsInline style={{width:'100%',height:'100%',objectFit:'cover',display:'block',transform:facing==='user'?'scaleX(-1)':'none'}}/>}
-      {!pv&&rdy&&<button className="camera-switch" onClick={switchCamera} disabled={!hasBack||switching} type="button" aria-label={facing==='user'?'Switch to back camera':'Switch to front camera'} title={facing==='user'?'Switch to back camera':'Switch to front camera'}><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M20 7h-3l-1.5-2h-5L9 7H6a3 3 0 0 0-3 3v7a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-7a3 3 0 0 0-3-3Z"/><circle cx="13" cy="13.5" r="3.5"/><path d="M6 13h.01"/><path d="m4 4 2-2M4 4l2 2"/></svg></button>}
+      {pv?<video src={URL.createObjectURL(pv)} controls style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>:<video ref={vr} autoPlay muted playsInline style={{width:'100%',height:'100%',objectFit:'cover',display:'block',transform:'scaleX(-1)'}}/>}
       {cd!==null&&<div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.6)'}}><span style={{fontSize:64,fontWeight:800,color:'#fff'}}>{cd}</span></div>}
       {rec&&<div style={{position:'absolute',top:12,left:12,display:'flex',alignItems:'center',gap:6,background:'rgba(0,0,0,0.7)',borderRadius:20,padding:'5px 14px'}}><div style={{width:8,height:8,borderRadius:'50%',background:T.danger,animation:'pulse 1s ease infinite'}}/><span style={{color:'#fff',fontSize:12,fontWeight:600}}>REC {fm(el)}</span></div>}
       {rec&&<div style={{position:'absolute',bottom:0,left:0,right:0,height:3,background:'rgba(255,255,255,0.06)'}}><div style={{height:'100%',background:T.gradient,width:`${(el/300)*100}%`,transition:'width 1s'}}/></div>}
@@ -616,6 +579,7 @@ const Dash=({go,show,session,profile,setProfile,subs,onLogout,ls,tab,setTab,selS
           <button onClick={()=>{go('upload');setMobileNavOpen(false)}} style={{display:'block',width:'100%',padding:'10px 11px',border:0,borderRadius:8,background:'transparent',color:T.muted,fontFamily:T.font,fontSize:12.5,textAlign:'left',cursor:'pointer'}}>New Upload</button>
           <div style={{padding:'8px 10px 5px',fontSize:9,color:T.dim,textTransform:'uppercase',letterSpacing:1.4,fontWeight:700}}>Account</div>
           {accountNav.map(n=><button key={n.id} onClick={()=>{setTab(n.id);setMobileNavOpen(false)}} style={{display:'block',width:'100%',padding:'10px 11px',border:0,borderRadius:8,background:tab===n.id?'rgba(255,255,255,.09)':'transparent',color:tab===n.id?'#fff':T.muted,fontFamily:T.font,fontSize:12.5,fontWeight:tab===n.id?700:500,textAlign:'left',cursor:'pointer'}}>{n.l}</button>)}
+          <button onClick={()=>{setMobileNavOpen(false);onLogout()}} style={{display:'block',width:'100%',marginTop:4,padding:'10px 11px',border:0,borderRadius:8,background:'transparent',color:T.danger,fontFamily:T.font,fontSize:12.5,fontWeight:600,textAlign:'left',cursor:'pointer'}}>Logout</button>
         </div>}
       </div>
       <nav className="desktop-nav" style={{flex:1,display:'flex',flexDirection:'column',gap:2,position:'relative',zIndex:2}}>
