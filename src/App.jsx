@@ -297,28 +297,46 @@ const Recorder=({onDone,onCancel})=>{
   const startCamera=async(mode='user')=>{
     const previousDeviceId=deviceId.current;
     stopCamera();
-    try{
-      const constraints={video:{width:{ideal:1920},height:{ideal:1080},facingMode:mode==='environment'?{exact:'environment'}:'user'},audio:true};
-      const stream=await navigator.mediaDevices.getUserMedia(constraints);
+    const rearLabel=device=>/back|rear|environment|world/i.test(device.label||'');
+    const frontLabel=device=>/front|user|facetime|selfie/i.test(device.label||'');
+    const attachStream=async stream=>{
       if(!alive.current){stream.getTracks().forEach(track=>track.stop());return false;}
-      sr.current=stream;deviceId.current=stream.getVideoTracks()[0]?.getSettings?.().deviceId;
+      const track=stream.getVideoTracks()[0];
+      const settings=track?.getSettings?.()||{};
+      if(mode==='environment'&&(settings.facingMode==='user'||frontLabel(track))){stream.getTracks().forEach(item=>item.stop());throw new Error('Requested rear camera was not returned');}
+      sr.current=stream;deviceId.current=settings.deviceId;
       if(vr.current){vr.current.srcObject=stream;await vr.current.play().catch(()=>{});}
+      const devices=await navigator.mediaDevices.enumerateDevices().catch(()=>[]);
+      const cameras=devices.filter(device=>device.kind==='videoinput');
+      console.debug('[camera] active track', {mode, label:track?.label, settings, inputs:cameras.length});
+      setHasBack(cameras.length>1||settings.facingMode==='environment'||mode==='environment');
       sRdy(true);sErr(null);return true;
-      const videoTrack=stream.getVideoTracks()[0];
-      setHasBack(videoTrack?.getSettings?.().facingMode==='environment'||hasBack);
+    };
+    try{
+      let stream;
+      try{
+        stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1920},height:{ideal:1080},facingMode:{exact:mode}},audio:true});
+      }catch(exactError){
+        console.warn('[camera] exact facingMode failed', exactError.name, exactError.message);
+        stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1920},height:{ideal:1080},facingMode:mode},audio:true});
+      }
+      return attachStream(stream);
     }catch(error){
-      if(mode==='environment'){
+      if(mode==='environment'||mode==='user'){
         try{
           const devices=await navigator.mediaDevices.enumerateDevices();
           const cameras=devices.filter(device=>device.kind==='videoinput');
-          const fallback=cameras.find(device=>device.deviceId!==previousDeviceId);
+          console.debug('[camera] available video devices', cameras);
+          const targetLabel=mode==='environment'?rearLabel:frontLabel;
+          const fallback=cameras.find(device=>device.deviceId!==previousDeviceId&&targetLabel(device))||cameras.find(device=>device.deviceId!==previousDeviceId);
           if(fallback){
             const stream=await navigator.mediaDevices.getUserMedia({video:{deviceId:{exact:fallback.deviceId}},audio:true});
-            sr.current=stream;deviceId.current=stream.getVideoTracks()[0]?.getSettings?.().deviceId;if(vr.current){vr.current.srcObject=stream;await vr.current.play().catch(()=>{});}sRdy(true);sErr(null);return true;
+            return attachStream(stream);
           }
-        }catch{}
-        setHasBack(false);sErr('Back camera is not available on this device.');
-      }else{sErr('Camera access is required to record your video resume.');}
+        }catch(fallbackError){console.warn('[camera] deviceId fallback failed', fallbackError.name, fallbackError.message)}
+        if(mode==='environment'){setHasBack(false);sErr('Back camera is not available on this device.');}
+        else{sErr('Camera access is required to record your video resume.');}
+      }else{sErr(error.name==='NotAllowedError'||error.name==='SecurityError'?'Camera permission is required to record your video resume.':'Camera access is required to record your video resume.');}
       sRdy(false);return false;
     }
   };
