@@ -93,8 +93,10 @@ input::placeholder{color:rgba(90,90,90,0.5)}select{appearance:none}a{text-decora
   .dashboard-main [style*="grid-template-columns"]:not(.stats-grid)>*{grid-column:auto!important}
   .stats-grid{grid-template-columns:1fr 1fr!important;gap:10px!important;margin-bottom:24px!important}
   .stats-grid>div{padding:18px 14px!important}
-  .activity-item{align-items:flex-start!important;gap:12px!important;padding:13px 14px!important}
-  .activity-item>div:last-child{flex-wrap:wrap!important;justify-content:flex-end!important}
+  .activity-item{flex-direction:column!important;align-items:stretch!important;gap:12px!important;padding:14px!important;transform:none!important}
+  .activity-details{width:100%!important;min-width:0!important}
+  .activity-actions{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;width:100%!important;gap:7px!important}
+  .activity-actions>*{min-width:0!important;width:100%!important;text-align:center!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;margin:0!important}
   .responsive-grid{grid-template-columns:1fr!important;gap:14px!important}
   .analytics-grid{grid-template-columns:1fr!important;gap:14px!important}
   .analytics-grid>*{grid-column:auto!important;min-width:0!important}
@@ -798,7 +800,7 @@ const ActivityItem = ({s, i, setTab, setSelSub}) => {
       {/* Left scan line on hover */}
       <div style={{position:'absolute',left:0,top:0,bottom:0,width:3,background:'linear-gradient(180deg,transparent,rgba(255,255,255,0.2),transparent)',opacity:hov?1:0,transition:'opacity 0.4s'}}/>
 
-      <div style={{display:'flex',alignItems:'center',gap:14}}>
+      <div className="activity-details" style={{display:'flex',alignItems:'center',gap:14}}>
         <div style={{
           width:42,height:42,borderRadius:12,
           display:'flex',alignItems:'center',justifyContent:'center',
@@ -818,7 +820,7 @@ const ActivityItem = ({s, i, setTab, setSelSub}) => {
         </div>
       </div>
 
-      <div style={{display:'flex',gap:6,alignItems:'center'}}>
+      <div className="activity-actions" style={{display:'flex',gap:6,alignItems:'center'}}>
         {s.resume_pdf_url&&<a href={s.resume_pdf_url} target="_blank" rel="noopener" style={{padding:'6px 14px',borderRadius:8,fontSize:11.5,fontWeight:600,background:hov?'#fff':'rgba(255,255,255,0.04)',color:hov?'#0a0a0a':'#fff',border:`1px solid rgba(255,255,255,0.08)`,transition:'all 0.3s',textDecoration:'none',boxShadow:hov?'0 0 20px rgba(255,255,255,0.1)':'none'}}>Resume</a>}
         {s.highlight_clip_url&&<a href={s.highlight_clip_url} target="_blank" rel="noopener" style={{padding:'6px 14px',borderRadius:8,fontSize:11.5,fontWeight:600,background:'rgba(167,139,250,0.04)',color:T.purple,border:'1px solid rgba(167,139,250,0.08)',textDecoration:'none',transition:'all 0.3s'}}>Clip</a>}
         {s.status==="completed"&&<span onClick={()=>{setSelSub(s);setTab('analytics')}} style={{padding:'6px 14px',borderRadius:8,fontSize:11.5,fontWeight:600,background:'rgba(250,204,21,0.04)',color:T.warning,border:'1px solid rgba(250,204,21,0.08)',cursor:'pointer',transition:'all 0.3s'}}>Analytics</span>}
