@@ -83,8 +83,7 @@ input::placeholder{color:rgba(90,90,90,0.5)}select{appearance:none}a{text-decora
   .dashboard-sidebar .sidebar-logo{margin:0!important;padding:0 4px!important}
   .dashboard-sidebar .sidebar-logo>div:last-child{display:none!important}
   .desktop-nav{display:none!important}
-  .mobile-nav{display:block!important}
-  .mobile-nav-toggle{display:flex!important}
+  .mobile-nav-select{display:block!important}
   .dashboard-sidebar .user-card,.dashboard-sidebar>div:last-child{display:none!important}
   .dashboard-main{margin-left:0!important;padding:24px 16px 40px!important;min-height:calc(100vh - 74px)!important}
   .dashboard-main h1{font-size:26px!important;letter-spacing:-.8px!important}
@@ -96,7 +95,8 @@ input::placeholder{color:rgba(90,90,90,0.5)}select{appearance:none}a{text-decora
   .activity-item>div:last-child{flex-wrap:wrap!important;justify-content:flex-end!important}
   .responsive-grid{grid-template-columns:1fr!important;gap:14px!important}
   .analytics-grid{grid-template-columns:1fr!important;gap:14px!important}
-  .analytics-grid>*{grid-column:auto!important}
+  .analytics-grid>*{grid-column:auto!important;min-width:0!important}
+  .analytics-transcript{overflow-wrap:anywhere!important;word-break:break-word!important}
   .summary-stats{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important}
   .summary-stats>div:last-child{grid-column:span 2}
   .profile-card{padding:22px!important}
@@ -489,7 +489,6 @@ const NavItem=({n,active,onClick,badge,delay=0})=>{
 /* Dashboard */
 const Dash=({go,show,session,profile,setProfile,subs,onLogout,ls,tab,setTab,selSub,setSelSub})=>{
   const comp=subs.filter(s=>s.status==="completed");
-  const [mobileNavOpen,setMobileNavOpen]=useState(false);
   useEffect(()=>{if(!session?.user?.id)return;const iv=setInterval(()=>ls(session.user.id),10000);return()=>clearInterval(iv)},[session?.user?.id]);
   const accountNav=[
     {id:'prof',l:'Profile',paths:['M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2','M12 7a4 4 0 100 8 4 4 0 000-8z']},
@@ -519,13 +518,11 @@ const Dash=({go,show,session,profile,setProfile,subs,onLogout,ls,tab,setTab,selS
         </div>
       </div>
 
-      <button className="mobile-nav-toggle" onClick={()=>setMobileNavOpen(open=>!open)} aria-expanded={mobileNavOpen} aria-controls="mobile-dashboard-nav" style={{display:'none',width:'100%',alignItems:'center',justifyContent:'space-between',padding:'11px 12px',borderRadius:11,border:`1px solid ${T.border}`,background:'rgba(255,255,255,0.04)',color:'#fff',fontFamily:T.font,fontSize:13,fontWeight:700,cursor:'pointer'}}>
-        <span style={{display:'flex',alignItems:'center',gap:9}}><SI paths={navI.find(n=>n.id===tab)?.paths||navI[0].paths}/>{navI.find(n=>n.id===tab)?.l||'Dashboard'}</span>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{transform:mobileNavOpen?'rotate(180deg)':'none',transition:'transform .2s'}}><polyline points="6 9 12 15 18 9"/></svg>
-      </button>
-      <div id="mobile-dashboard-nav" className="mobile-nav" style={{position:'absolute',top:68,left:14,right:14,zIndex:40,padding:8,borderRadius:14,background:'rgba(16,16,16,.98)',border:`1px solid ${T.border}`,boxShadow:'0 18px 50px rgba(0,0,0,.5)',display:mobileNavOpen?'block':'none'}}>
-        {[...navI,{id:'upload',l:'New Upload',paths:['M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4','M17 8l-5-5-5 5','M12 3v12']},...accountNav].map(n=><button key={n.id} onClick={()=>{if(n.id==='upload')go('upload');else{setTab(n.id);setSelSub(null)}setMobileNavOpen(false)}} style={{display:'flex',alignItems:'center',gap:10,width:'100%',padding:'11px 12px',border:0,borderRadius:9,background:tab===n.id?'rgba(255,255,255,.08)':'transparent',color:tab===n.id?'#fff':T.muted,fontFamily:T.font,fontSize:13,fontWeight:tab===n.id?700:500,textAlign:'left',cursor:'pointer'}}><SI paths={n.paths}/><span>{n.l}</span>{n.id==='submissions'&&subs.length>0&&<span style={{marginLeft:'auto',fontSize:10,padding:'2px 7px',borderRadius:6,background:'rgba(255,255,255,.08)'}}>{subs.length}</span>}</button>)}
-      </div>
+      <select className="mobile-nav-select" aria-label="Dashboard navigation" value={tab} onChange={e=>{const next=e.target.value;if(next==='upload')go('upload');else{setTab(next);setSelSub(null)}}} style={{display:'none',width:'100%',padding:'11px 36px 11px 12px',borderRadius:11,border:`1px solid ${T.border}`,background:'#161616',color:'#fff',fontFamily:T.font,fontSize:13,fontWeight:700,cursor:'pointer'}}>
+        <optgroup label="Dashboard">{navI.map(n=><option key={n.id} value={n.id}>{n.l}{n.id==='submissions'&&subs.length>0?` (${subs.length})`:''}</option>)}</optgroup>
+        <option value="upload">New Upload</option>
+        <optgroup label="Account">{accountNav.map(n=><option key={n.id} value={n.id}>{n.l}</option>)}</optgroup>
+      </select>
       <nav className="desktop-nav" style={{flex:1,display:'flex',flexDirection:'column',gap:2,position:'relative',zIndex:2}}>
         {/* Dashboard section */}
         <div style={{fontSize:9,textTransform:'uppercase',letterSpacing:2,color:T.dim,padding:'0 14px 10px',fontWeight:700,display:'flex',alignItems:'center',gap:10}}>
@@ -1159,7 +1156,7 @@ const AnaTab=({subs,selSub,setSelSub})=>{
       {subs.map((s,i)=><button key={s.id} onClick={()=>setSelSub(s)} style={{padding:'9px 18px',borderRadius:10,fontSize:12,fontWeight:600,fontFamily:T.font,cursor:'pointer',transition:'all 0.3s',border:`1px solid ${cur?.id===s.id?'rgba(255,255,255,0.12)':T.border}`,background:cur?.id===s.id?'rgba(255,255,255,0.06)':'rgba(255,255,255,0.01)',color:cur?.id===s.id?'#fff':T.muted,animation:cur?.id===s.id?'tabPop 0.35s cubic-bezier(0.34,1.56,0.64,1)':'none'}}>{s.video_filename||`Submission ${i+1}`}</button>)}
     </div>
 
-    {cur&&<div key={cur.id} style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:18}}>
+    {cur&&<div key={cur.id} className="analytics-grid" style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:18}}>
 
       {/* 1. PERFORMANCE RANKING — sorted bars with rank badges */}
       <Card animate delay={0.15} style={{padding:28}}>
@@ -1200,7 +1197,7 @@ const AnaTab=({subs,selSub,setSelSub})=>{
       {/* 4. SUBMISSION SUMMARY — unique stats, not same 4 scores */}
       <Card animate delay={0.45} style={{padding:28,gridColumn:'span 2'}}>
         <CTitle icon="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" label="Submission Summary"/>
-        <div style={{display:'flex',gap:14}}>
+        <div className="summary-stats" style={{display:'flex',gap:14}}>
           <StatMini value={`${avg}%`} label="Overall Score"/>
           <StatMini value={grade} label="Grade"/>
           <StatMini value={`${wordCount}`} label="Words Spoken"/>
@@ -1226,7 +1223,7 @@ const AnaTab=({subs,selSub,setSelSub})=>{
       {/* 7. TRANSCRIPT */}
       <Card animate delay={0.75} style={{padding:28}}>
         <CTitle icon="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" label="Transcript"/>
-        {cur.transcript?<div style={{fontSize:13,color:T.textSoft,lineHeight:1.9,maxHeight:180,overflowY:'auto',padding:'14px 18px',borderRadius:14,background:'rgba(0,0,0,0.3)',border:`1px solid ${T.border}`}}>{cur.transcript}</div>
+        {cur.transcript?<div className="analytics-transcript" style={{fontSize:13,color:T.textSoft,lineHeight:1.9,maxHeight:180,overflowY:'auto',padding:'14px 18px',borderRadius:14,background:'rgba(0,0,0,0.3)',border:`1px solid ${T.border}`}}>{cur.transcript}</div>
         :<span style={{color:T.dim,fontSize:13}}>No transcript available</span>}
       </Card>
 
