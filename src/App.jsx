@@ -83,7 +83,9 @@ input::placeholder{color:rgba(90,90,90,0.5)}select{appearance:none}a{text-decora
   .dashboard-sidebar .sidebar-logo{margin:0!important;padding:0 4px!important}
   .dashboard-sidebar .sidebar-logo>div:last-child{display:none!important}
   .desktop-nav{display:none!important}
-  .mobile-nav-select{display:block!important}
+  .mobile-nav-wrap{display:block!important}
+  .mobile-nav-button{display:flex!important}
+  .mobile-nav-menu{display:block!important}
   .dashboard-sidebar .user-card,.dashboard-sidebar>div:last-child{display:none!important}
   .dashboard-main{margin-left:0!important;padding:24px 16px 40px!important;min-height:calc(100vh - 74px)!important}
   .dashboard-main h1{font-size:26px!important;letter-spacing:-.8px!important}
@@ -114,7 +116,7 @@ input::placeholder{color:rgba(90,90,90,0.5)}select{appearance:none}a{text-decora
   .stats-grid{grid-template-columns:1fr!important}
   .landing-feature-list{grid-template-columns:1fr!important}
 }
-.mobile-nav,.mobile-nav-toggle{display:none}
+  .mobile-nav-wrap,.mobile-nav-button,.mobile-nav-menu{display:none}
 `;
 
 /* Helpers */
@@ -489,6 +491,7 @@ const NavItem=({n,active,onClick,badge,delay=0})=>{
 /* Dashboard */
 const Dash=({go,show,session,profile,setProfile,subs,onLogout,ls,tab,setTab,selSub,setSelSub})=>{
   const comp=subs.filter(s=>s.status==="completed");
+  const [mobileNavOpen,setMobileNavOpen]=useState(false);
   useEffect(()=>{if(!session?.user?.id)return;const iv=setInterval(()=>ls(session.user.id),10000);return()=>clearInterval(iv)},[session?.user?.id]);
   const accountNav=[
     {id:'prof',l:'Profile',paths:['M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2','M12 7a4 4 0 100 8 4 4 0 000-8z']},
@@ -518,11 +521,20 @@ const Dash=({go,show,session,profile,setProfile,subs,onLogout,ls,tab,setTab,selS
         </div>
       </div>
 
-      <select className="mobile-nav-select" aria-label="Dashboard navigation" value={tab} onChange={e=>{const next=e.target.value;if(next==='upload')go('upload');else{setTab(next);setSelSub(null)}}} style={{display:'none',width:'100%',padding:'11px 36px 11px 12px',borderRadius:11,border:`1px solid ${T.border}`,background:'#161616',color:'#fff',fontFamily:T.font,fontSize:13,fontWeight:700,cursor:'pointer'}}>
-        <optgroup label="Dashboard">{navI.map(n=><option key={n.id} value={n.id}>{n.l}{n.id==='submissions'&&subs.length>0?` (${subs.length})`:''}</option>)}</optgroup>
-        <option value="upload">New Upload</option>
-        <optgroup label="Account">{accountNav.map(n=><option key={n.id} value={n.id}>{n.l}</option>)}</optgroup>
-      </select>
+      <div className="mobile-nav-wrap" style={{position:'relative'}}>
+        <button className="mobile-nav-button" onClick={()=>setMobileNavOpen(open=>!open)} aria-expanded={mobileNavOpen} style={{display:'none',width:'100%',alignItems:'center',justifyContent:'space-between',padding:'11px 13px',borderRadius:11,border:`1px solid ${T.border}`,background:'rgba(255,255,255,0.04)',color:'#fff',fontFamily:T.font,fontSize:13,fontWeight:700,cursor:'pointer'}}>
+          <span>{[...navI,...accountNav].find(n=>n.id===tab)?.l||'Dashboard'}</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{transform:mobileNavOpen?'rotate(180deg)':'none',transition:'transform .2s'}}><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        {mobileNavOpen&&<div className="mobile-nav-menu" style={{position:'absolute',top:'calc(100% + 8px)',left:0,right:0,zIndex:40,padding:6,borderRadius:12,background:'#151515',border:`1px solid ${T.border}`,boxShadow:'0 16px 36px rgba(0,0,0,.55)'}}>
+          <div style={{padding:'7px 10px 5px',fontSize:9,color:T.dim,textTransform:'uppercase',letterSpacing:1.4,fontWeight:700}}>Dashboard</div>
+          {navI.map(n=><button key={n.id} onClick={()=>{setTab(n.id);setSelSub(null);setMobileNavOpen(false)}} style={{display:'flex',alignItems:'center',justifyContent:'space-between',width:'100%',padding:'10px 11px',border:0,borderRadius:8,background:tab===n.id?'rgba(255,255,255,.09)':'transparent',color:tab===n.id?'#fff':T.muted,fontFamily:T.font,fontSize:12.5,fontWeight:tab===n.id?700:500,textAlign:'left',cursor:'pointer'}}><span>{n.l}</span>{n.id==='submissions'&&subs.length>0&&<span style={{fontSize:10,padding:'2px 6px',borderRadius:5,background:'rgba(255,255,255,.08)'}}>{subs.length}</span>}</button>)}
+          <div style={{height:1,margin:'5px 6px',background:T.border}}/>
+          <button onClick={()=>{go('upload');setMobileNavOpen(false)}} style={{display:'block',width:'100%',padding:'10px 11px',border:0,borderRadius:8,background:'transparent',color:T.muted,fontFamily:T.font,fontSize:12.5,textAlign:'left',cursor:'pointer'}}>New Upload</button>
+          <div style={{padding:'8px 10px 5px',fontSize:9,color:T.dim,textTransform:'uppercase',letterSpacing:1.4,fontWeight:700}}>Account</div>
+          {accountNav.map(n=><button key={n.id} onClick={()=>{setTab(n.id);setMobileNavOpen(false)}} style={{display:'block',width:'100%',padding:'10px 11px',border:0,borderRadius:8,background:tab===n.id?'rgba(255,255,255,.09)':'transparent',color:tab===n.id?'#fff':T.muted,fontFamily:T.font,fontSize:12.5,fontWeight:tab===n.id?700:500,textAlign:'left',cursor:'pointer'}}>{n.l}</button>)}
+        </div>}
+      </div>
       <nav className="desktop-nav" style={{flex:1,display:'flex',flexDirection:'column',gap:2,position:'relative',zIndex:2}}>
         {/* Dashboard section */}
         <div style={{fontSize:9,textTransform:'uppercase',letterSpacing:2,color:T.dim,padding:'0 14px 10px',fontWeight:700,display:'flex',alignItems:'center',gap:10}}>
