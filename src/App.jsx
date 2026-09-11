@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase, auth, db } from './supabase.js';
 import { uploadToCloudinary } from './cloudinary.js';
 import { api } from './api.js';
@@ -54,6 +55,7 @@ input::placeholder{color:rgba(90,90,90,0.5)}select{appearance:none}a{text-decora
 @keyframes tagDrop{from{transform:translateY(-10px) scale(.8);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}
 @keyframes borderTrace{0%{background-position:0% 50%}100%{background-position:200% 50%}}
 .lift{will-change:transform}
+.recorder-shell{width:100%;max-width:520px;margin:0 auto;touch-action:none;overscroll-behavior:none}
 .camera-switch,.camera-close{display:none}
 .lift:hover{transform:translateY(-5px);border-color:rgba(255,255,255,0.14)!important;box-shadow:0 18px 50px rgba(0,0,0,.45)}
 .sweepbar{position:relative;overflow:hidden}
@@ -112,7 +114,7 @@ input::placeholder{color:rgba(90,90,90,0.5)}select{appearance:none}a{text-decora
   .upload-options>div{padding:28px 20px 34px!important}
   .upload-shell{padding:84px 16px 24px!important;align-items:flex-start!important}
   .upload-card{padding:24px 18px!important}
-  .recorder-shell{position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;z-index:100!important;background:#000!important;display:block!important;padding:0!important;overflow:hidden!important}
+  .recorder-shell{position:fixed!important;inset:0!important;width:100vw!important;min-width:100vw!important;height:100vh!important;height:100svh!important;height:100dvh!important;max-width:none!important;margin:0!important;z-index:999999!important;background:#000!important;display:block!important;padding:0!important;overflow:hidden!important;touch-action:none!important;overscroll-behavior:none!important;user-select:none!important}
   .recorder-preview{position:absolute!important;inset:0!important;width:100vw!important;height:100dvh!important;aspect-ratio:auto!important;border-radius:0!important;margin:0!important}
   .recorder-preview>video{width:100%!important;height:100%!important;object-fit:cover!important;object-position:center!important}
   .recorder-controls{position:absolute!important;left:0!important;right:0!important;bottom:0!important;z-index:102!important;display:flex!important;gap:10px!important;width:100%!important;padding:22px 16px max(30px,env(safe-area-inset-bottom))!important;background:linear-gradient(transparent,rgba(0,0,0,.94) 38%)!important}
@@ -289,15 +291,17 @@ const FaceScan=({stage,prog=0})=>{
 
 /* Recorder */
 const Recorder=({onDone,onCancel})=>{
-  const vr=useRef(),mr=useRef(),sr=useRef(),ch=useRef([]),tr=useRef(),pvUrl=useRef();
+  const vr=useRef(),mr=useRef(),sr=useRef(),ch=useRef([]),tr=useRef(),pvUrl=useRef(),deviceId=useRef(),alive=useRef(true);
   const[rec,sR]=useState(false),[cd,sC]=useState(null),[el,sE]=useState(0),[rdy,sRdy]=useState(false),[err,sErr]=useState(null),[pv,sPv]=useState(null),[facing,setFacing]=useState('user'),[hasBack,setHasBack]=useState(true);
   const stopCamera=()=>{sr.current?.getTracks().forEach(track=>track.stop());sr.current=null;if(vr.current)vr.current.srcObject=null;sRdy(false)};
   const startCamera=async(mode='user')=>{
+    const previousDeviceId=deviceId.current;
     stopCamera();
     try{
       const constraints={video:{width:{ideal:1920},height:{ideal:1080},facingMode:mode==='environment'?{exact:'environment'}:'user'},audio:true};
       const stream=await navigator.mediaDevices.getUserMedia(constraints);
-      sr.current=stream;
+      if(!alive.current){stream.getTracks().forEach(track=>track.stop());return false;}
+      sr.current=stream;deviceId.current=stream.getVideoTracks()[0]?.getSettings?.().deviceId;
       if(vr.current){vr.current.srcObject=stream;await vr.current.play().catch(()=>{});}
       sRdy(true);sErr(null);return true;
       const videoTrack=stream.getVideoTracks()[0];
@@ -307,11 +311,10 @@ const Recorder=({onDone,onCancel})=>{
         try{
           const devices=await navigator.mediaDevices.enumerateDevices();
           const cameras=devices.filter(device=>device.kind==='videoinput');
-          const currentId=sr.current?.getVideoTracks?.()[0]?.getSettings?.().deviceId;
-          const fallback=cameras.find(device=>device.deviceId!==currentId)||cameras[0];
+          const fallback=cameras.find(device=>device.deviceId!==previousDeviceId);
           if(fallback){
             const stream=await navigator.mediaDevices.getUserMedia({video:{deviceId:{exact:fallback.deviceId}},audio:true});
-            sr.current=stream;if(vr.current){vr.current.srcObject=stream;await vr.current.play().catch(()=>{});}sRdy(true);sErr(null);return true;
+            sr.current=stream;deviceId.current=stream.getVideoTracks()[0]?.getSettings?.().deviceId;if(vr.current){vr.current.srcObject=stream;await vr.current.play().catch(()=>{});}sRdy(true);sErr(null);return true;
           }
         }catch{}
         setHasBack(false);sErr('Back camera is not available on this device.');
@@ -319,15 +322,15 @@ const Recorder=({onDone,onCancel})=>{
       sRdy(false);return false;
     }
   };
-  useEffect(()=>{const restore=document.body.style.cssText;document.body.style.overflow='hidden';startCamera('user');return()=>{clearInterval(tr.current);mr.current?.stop();stopCamera();if(pvUrl.current)URL.revokeObjectURL(pvUrl.current);document.body.style.cssText=restore}},[]);
+  useEffect(()=>{alive.current=true;const bodyStyle=document.body.style.cssText;const htmlStyle=document.documentElement.style.cssText;document.body.style.overflow='hidden';document.documentElement.style.overflow='hidden';startCamera('user');return()=>{alive.current=false;clearInterval(tr.current);mr.current?.stop();stopCamera();if(pvUrl.current)URL.revokeObjectURL(pvUrl.current);document.body.style.cssText=bodyStyle;document.documentElement.style.cssText=htmlStyle}},[]);
   const switchCamera=async()=>{if(rec||pv||!hasBack)return;const next=facing==='user'?'environment':'user';setRdy(false);const ok=await startCamera(next);if(ok)setFacing(next)};
   const scd=()=>{sC(3);let c=3;const iv=setInterval(()=>{c--;if(c<=0){clearInterval(iv);sC(null);startRecording()}else sC(c)},1000)};
   const startRecording=()=>{if(!sr.current)return;ch.current=[];const mime=MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")?"video/webm;codecs=vp9,opus":"video/webm";const recorder=new MediaRecorder(sr.current,{mimeType:mime});recorder.ondataavailable=e=>{if(e.data.size>0)ch.current.push(e.data)};recorder.onstop=()=>{const blob=new Blob(ch.current,{type:'video/webm'});pvUrl.current=URL.createObjectURL(blob);sPv(blob);stopCamera()};mr.current=recorder;recorder.start(100);sR(true);sE(0);tr.current=setInterval(()=>sE(p=>{if(p>=300){stopRecording();return 300}return p+1}),1000)};
   const stopRecording=()=>{clearInterval(tr.current);if(mr.current?.state==='recording')mr.current.stop();sR(false)};
   const retake=()=>{if(pvUrl.current)URL.revokeObjectURL(pvUrl.current);pvUrl.current=null;sPv(null);sE(0);startCamera(facing)};
   const fm=s=>`${Math.floor(s/60).toString().padStart(2,"0")}:${(s%60).toString().padStart(2,"0")}`;
-  if(err)return <div className="recorder-shell recorder-error"><div><p style={{color:T.danger,marginBottom:20}}>{err}</p><Btn onClick={()=>{sErr(null);startCamera(facing)}}>Allow Camera Access</Btn><Btn v="secondary" onClick={onCancel}>Back</Btn></div></div>;
-  return <div className="recorder-shell">
+  if(err)return createPortal(<div className="recorder-shell recorder-error"><div><p style={{color:T.danger,marginBottom:20}}>{err}</p><Btn onClick={()=>{sErr(null);startCamera(facing)}}>Allow Camera Access</Btn><Btn v="secondary" onClick={onCancel}>Back</Btn></div></div>,document.body);
+  return createPortal(<div className="recorder-shell">
     <div className="recorder-preview" style={{borderRadius:14,overflow:'hidden',background:'#000',marginBottom:16,position:'relative',aspectRatio:'16/9'}}>
       {pv?<video src={URL.createObjectURL(pv)} controls style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>:<video ref={vr} autoPlay muted playsInline style={{width:'100%',height:'100%',objectFit:'cover',display:'block',transform:facing==='user'?'scaleX(-1)':'none'}}/>}
       {!pv&&!rec&&rdy&&<button className="camera-switch" onClick={switchCamera} disabled={!hasBack} type="button" aria-label={facing==='user'?'Switch to back camera':'Switch to front camera'} title={facing==='user'?'Switch to back camera':'Switch to front camera'}><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M20 7h-3l-1.5-2h-5L9 7H6a3 3 0 0 0-3 3v7a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-7a3 3 0 0 0-3-3Z"/><circle cx="13" cy="13.5" r="3.5"/><path d="M6 13h.01"/><path d="m4 4 2-2M4 4l2 2"/></svg></button>}
@@ -337,7 +340,7 @@ const Recorder=({onDone,onCancel})=>{
     </div>
     <button className="camera-close" onClick={onCancel} type="button" aria-label="Close camera">×</button>
     <div className="recorder-controls">{pv?<><Btn v="secondary" onClick={retake}>Retake</Btn><Btn onClick={()=>onDone(new File([pv],`rec_${Date.now()}.webm`,{type:"video/webm"}))}>Use This</Btn></>:rec?<Btn v="danger" onClick={stopRecording}>Stop</Btn>:rdy?<><Btn v="secondary" onClick={onCancel} full={false}>Cancel</Btn><Btn onClick={scd}>Start Recording</Btn></>:<div style={{textAlign:'center',padding:20,width:'100%'}}><div style={{width:20,height:20,border:`2px solid ${T.border}`,borderTopColor:'#fff',borderRadius:'50%',animation:'spin .8s linear infinite',margin:'0 auto'}}/></div>}</div>
-  </div>;
+  </div>,document.body);
 };
 
 /* ================================================================
