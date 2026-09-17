@@ -56,8 +56,11 @@ input::placeholder{color:rgba(90,90,90,0.5)}select{appearance:none}a{text-decora
 @keyframes tagDrop{from{transform:translateY(-10px) scale(.8);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}
 @keyframes borderTrace{0%{background-position:0% 50%}100%{background-position:200% 50%}}
 .lift{will-change:transform}
-.recorder-shell{width:100%;max-width:520px;margin:0 auto;touch-action:none;overscroll-behavior:none}
-.camera-close{display:none}
+.recorder-shell{position:fixed;inset:0;z-index:999999;width:100vw;height:100vh;height:100dvh;margin:0;padding:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.94);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);touch-action:none;overscroll-behavior:none}
+.recorder-shell .recorder-preview{width:100%;max-width:min(880px,calc(68vh * 16 / 9));box-shadow:0 30px 90px rgba(0,0,0,.6)}
+.recorder-controls{display:flex;gap:12px;width:100%;max-width:min(880px,calc(68vh * 16 / 9));justify-content:center}
+.recorder-controls>button{flex:1;min-width:0;max-width:260px}
+.camera-close{position:absolute;top:22px;right:26px;z-index:103;width:42px;height:42px;border:1px solid rgba(255,255,255,.2);border-radius:50%;background:rgba(0,0,0,.58);color:#fff;display:flex;align-items:center;justify-content:center;font:300 28px/1 ${T.font};cursor:pointer}
 .lift:hover{transform:translateY(-5px);border-color:rgba(255,255,255,0.14)!important;box-shadow:0 18px 50px rgba(0,0,0,.45)}
 .sweepbar{position:relative;overflow:hidden}
 .sweepbar::after{content:'';position:absolute;inset:0;width:30%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.45),transparent);animation:sweep 2.6s ease-in-out infinite;animation-delay:1.4s}
@@ -120,8 +123,8 @@ input::placeholder{color:rgba(90,90,90,0.5)}select{appearance:none}a{text-decora
   .recorder-preview{position:absolute!important;inset:0!important;width:100vw!important;height:100dvh!important;aspect-ratio:auto!important;border-radius:0!important;margin:0!important}
   .recorder-preview>video{width:100%!important;height:100%!important;object-fit:cover!important;object-position:center!important}
   .recorder-controls{position:absolute!important;left:0!important;right:0!important;bottom:0!important;z-index:102!important;display:flex!important;gap:10px!important;width:100%!important;padding:22px 16px max(30px,env(safe-area-inset-bottom))!important;background:linear-gradient(transparent,rgba(0,0,0,.94) 38%)!important}
-  .recorder-controls>button{flex:1!important;min-width:0!important}
-  .camera-close{position:absolute!important;top:72px!important;left:20px!important;z-index:103!important;width:42px!important;height:42px!important;border:1px solid rgba(255,255,255,.2)!important;border-radius:50%!important;background:rgba(0,0,0,.58)!important;color:#fff!important;display:flex!important;align-items:center!important;justify-content:center!important;font:300 28px/1 ${T.font}!important}
+  .recorder-controls>button{flex:1!important;min-width:0!important;max-width:none!important}
+  .camera-close{position:absolute!important;top:72px!important;left:20px!important;right:auto!important;z-index:103!important;width:42px!important;height:42px!important;border:1px solid rgba(255,255,255,.2)!important;border-radius:50%!important;background:rgba(0,0,0,.58)!important;color:#fff!important;display:flex!important;align-items:center!important;justify-content:center!important;font:300 28px/1 ${T.font}!important}
   .recorder-error{display:flex!important;align-items:center!important;justify-content:center!important;padding:24px!important;text-align:center!important}
   .toast{left:16px!important;right:16px!important;top:14px!important;max-width:none!important}
 }
@@ -294,30 +297,52 @@ const FaceScan=({stage,prog=0})=>{
 const Recorder=({onDone,onCancel})=>{
   const vr=useRef(),mr=useRef(),sr=useRef(),ch=useRef([]),tr=useRef(),pvUrl=useRef(),alive=useRef(true);
   const[rec,sR]=useState(false),[cd,sC]=useState(null),[el,sE]=useState(0),[rdy,sRdy]=useState(false),[err,sErr]=useState(null),[pv,sPv]=useState(null);
+  const camError=error=>{
+    const name=error?.name||'';
+    if(name==='NotAllowedError'||name==='SecurityError')return 'Camera permission is blocked. Click the camera icon in the browser address bar, choose "Allow", then press the button below.';
+    if(name==='NotFoundError'||name==='DevicesNotFoundError')return 'No camera was found on this device. Check that the webcam is enabled in Windows Settings > Privacy & security > Camera, then try again.';
+    if(name==='NotReadableError'||name==='TrackStartError')return 'Your camera is already in use by another app (Zoom, Teams, Meet, Windows Camera). Close that app, then try again.';
+    if(name==='OverconstrainedError')return 'This camera does not support the requested video quality. Try again - a lower quality will be used.';
+    return 'Camera access is required to record your video resume.';
+  };
   const stopCamera=()=>{sr.current?.getTracks().forEach(track=>track.stop());sr.current=null;if(vr.current)vr.current.srcObject=null;sRdy(false)};
   const startCamera=async()=>{
     stopCamera();
+    if(!navigator.mediaDevices?.getUserMedia){
+      sErr(window.isSecureContext===false
+        ?'The browser blocks the camera on an insecure address. Open the app on http://localhost:5173 or over https:// and try again.'
+        :'This browser does not support camera recording. Use the latest Chrome, Edge or Firefox.');
+      sRdy(false);return false;
+    }
     try{
-      const stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1920},height:{ideal:1080},facingMode:'user'},audio:true});
+      let stream;
+      try{
+        stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1920},height:{ideal:1080},facingMode:'user'},audio:true});
+      }catch(first){
+        if(first?.name!=='OverconstrainedError'&&first?.name!=='ConstraintNotSatisfiedError')throw first;
+        stream=await navigator.mediaDevices.getUserMedia({video:true,audio:true});
+      }
       if(!alive.current){stream.getTracks().forEach(track=>track.stop());return false;}
       sr.current=stream;
       if(vr.current){vr.current.srcObject=stream;await vr.current.play().catch(()=>{});}
       sRdy(true);sErr(null);return true;
     }catch(error){
-      sErr(error.name==='NotAllowedError'||error.name==='SecurityError'?'Camera permission is required to record your video resume.':'Camera access is required to record your video resume.');
+      console.error('[Recorder] getUserMedia failed:',error);
+      sErr(camError(error));
       sRdy(false);return false;
     }
   };
   useEffect(()=>{alive.current=true;const bodyStyle=document.body.style.cssText;const htmlStyle=document.documentElement.style.cssText;document.body.style.overflow='hidden';document.documentElement.style.overflow='hidden';startCamera();return()=>{alive.current=false;clearInterval(tr.current);mr.current?.stop();stopCamera();if(pvUrl.current)URL.revokeObjectURL(pvUrl.current);document.body.style.cssText=bodyStyle;document.documentElement.style.cssText=htmlStyle}},[]);
+  useEffect(()=>{const v=vr.current;if(!pv&&v&&sr.current&&v.srcObject!==sr.current){v.srcObject=sr.current;v.play().catch(()=>{})}});
   const scd=()=>{sC(3);let c=3;const iv=setInterval(()=>{c--;if(c<=0){clearInterval(iv);sC(null);startRecording()}else sC(c)},1000)};
   const startRecording=()=>{if(!sr.current)return;ch.current=[];const mime=MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")?"video/webm;codecs=vp9,opus":"video/webm";const recorder=new MediaRecorder(sr.current,{mimeType:mime});recorder.ondataavailable=e=>{if(e.data.size>0)ch.current.push(e.data)};recorder.onstop=()=>{const blob=new Blob(ch.current,{type:'video/webm'});stopCamera();pvUrl.current=URL.createObjectURL(blob);sPv(blob)};mr.current=recorder;recorder.start(100);sR(true);sE(0);tr.current=setInterval(()=>sE(p=>{if(p>=300){stopRecording();return 300}return p+1}),1000)};
   const stopRecording=()=>{clearInterval(tr.current);if(mr.current?.state==='recording')mr.current.stop();sR(false)};
-  const retake=()=>{if(pvUrl.current)URL.revokeObjectURL(pvUrl.current);pvUrl.current=null;sPv(null);sE(0);startCamera()};
+  const retake=()=>{if(pvUrl.current)URL.revokeObjectURL(pvUrl.current);pvUrl.current=null;sPv(null);sE(0);setTimeout(()=>{if(alive.current)startCamera()},0)};
   const fm=s=>`${Math.floor(s/60).toString().padStart(2,"0")}:${(s%60).toString().padStart(2,"0")}`;
   if(err)return createPortal(<div className="recorder-shell recorder-error"><div><p style={{color:T.danger,marginBottom:20}}>{err}</p><Btn onClick={()=>{sErr(null);startCamera()}}>Allow Camera Access</Btn><Btn v="secondary" onClick={onCancel}>Back</Btn></div></div>,document.body);
   return createPortal(<div className="recorder-shell">
     <div className="recorder-preview" style={{borderRadius:14,overflow:'hidden',background:'#000',marginBottom:16,position:'relative',aspectRatio:'16/9'}}>
-      {pv?<video src={URL.createObjectURL(pv)} controls style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>:<video ref={vr} autoPlay muted playsInline style={{width:'100%',height:'100%',objectFit:'cover',display:'block',transform:'scaleX(-1)'}}/>}
+      {pv?<video src={pvUrl.current} controls style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>:<video ref={vr} autoPlay muted playsInline style={{width:'100%',height:'100%',objectFit:'cover',display:'block',transform:'scaleX(-1)'}}/>}
       {cd!==null&&<div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.6)'}}><span style={{fontSize:64,fontWeight:800,color:'#fff'}}>{cd}</span></div>}
       {rec&&<div style={{position:'absolute',top:12,left:12,display:'flex',alignItems:'center',gap:6,background:'rgba(0,0,0,0.7)',borderRadius:20,padding:'5px 14px'}}><div style={{width:8,height:8,borderRadius:'50%',background:T.danger,animation:'pulse 1s ease infinite'}}/><span style={{color:'#fff',fontSize:12,fontWeight:600}}>REC {fm(el)}</span></div>}
       {rec&&<div style={{position:'absolute',bottom:0,left:0,right:0,height:3,background:'rgba(255,255,255,0.06)'}}><div style={{height:'100%',background:T.gradient,width:`${(el/300)*100}%`,transition:'width 1s'}}/></div>}
@@ -1614,7 +1639,7 @@ const UploadOptionCard=({type,title,desc,badge,onClick})=>{
 
 /* Upload Page */
 const UploadPg=({go,show,session,profile,ls})=>{const[mode,setMode]=useState(null),[file,setFile]=useState(null),[drag,setDrag]=useState(false);const[upl,setUpl]=useState(false),[prog,setProg]=useState(0),[stage,setStage]=useState("");const[error,setError]=useState(null),[prev,setPrev]=useState(null),[isRec,setIsRec]=useState(false);const fr=useRef();const hf=f=>{const v=valFile(f);if(!v.ok){setError(v.err);show(v.err,"error");return}setError(null);setFile(f);setPrev(URL.createObjectURL(f))};
-  const upload=async()=>{if(!file||!session)return;setUpl(true);setProg(0);setStage("Uploading video...");try{const cloud=await uploadToCloudinary(file,pct=>{setProg(Math.round(pct*0.4));setStage(`Uploading... ${pct}%`)});setStage("Saving to database...");setProg(42);const sub=await db.createSubmission(session.user.id,cloud.secure_url,file.name,file.size,isRec?"record":"upload");setProg(45);setStage("Starting AI analysis...");api.setToken(session.access_token);try{const job=await api.startProcessing({video_url:cloud.secure_url,submission_id:sub.id,user_id:session.user.id,user_name:profile?.full_name||"Student",user_university:profile?.university||"",user_branch:profile?.branch||"",user_year:profile?.year_of_study||1,user_email:session.user.email||"",user_phone:profile?.phone||"",user_linkedin:profile?.linkedin||"",user_location:profile?.location||"",target_job_description:profile?.target_jd||""});setProg(50);await api.waitForCompletion(job.job_id,s=>{const backendProg=s.progress||0;setProg(50+Math.round(backendProg*0.5));setStage(s.message||"Processing...")},5000);show("Resume & clip ready!","success")}catch(e){console.error(e);show("Uploaded! Processing queued.","info")}await ls(session.user.id);go("dashboard")}catch(err){console.error(err);show(err.message||"Failed","error");try{await ls(session.user.id)}catch{}}finally{setUpl(false)}};
+  const upload=async()=>{if(!file||!session)return;setUpl(true);setProg(0);setStage("Uploading video...");try{const cloud=await uploadToCloudinary(file,pct=>{setProg(Math.round(pct*0.4));setStage(`Uploading... ${pct}%`)});setStage("Saving to database...");setProg(42);const sub=await db.createSubmission(session.user.id,cloud.secure_url,file.name,file.size,isRec?"record":"upload");setProg(45);setStage("Starting AI analysis...");api.setToken(session.access_token);try{const job=await api.startProcessing({video_url:cloud.secure_url,submission_id:sub.id,user_id:session.user.id,user_name:profile?.full_name||"Student",user_university:profile?.university||"",user_branch:profile?.branch||"",user_year:profile?.year_of_study||1,phone:profile?.phone||"",linkedin:profile?.linkedin||"",location:profile?.location||""});setProg(50);await api.waitForCompletion(job.job_id,s=>{const backendProg=s.progress||0;setProg(50+Math.round(backendProg*0.5));setStage(s.message||"Processing...")},5000);show("Resume & clip ready!","success")}catch(e){console.error("[process] failed:",e);show(`Video saved, but analysis failed: ${e.message||"backend unreachable"}`,"error")}await ls(session.user.id);go("dashboard")}catch(err){console.error(err);show(err.message||"Failed","error");try{await ls(session.user.id)}catch{}}finally{setUpl(false)}};
   return<div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:24,position:'relative',zIndex:2}}><Card style={{width:'100%',maxWidth:560,padding:36,animation:'fadeUp .4s ease'}} glow><div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:28}}><div><h2 style={{fontSize:22,fontWeight:800}}>New Submission</h2><p style={{color:T.dim,fontSize:13,marginTop:4}}>Record or upload</p></div>{!upl&&<Btn v="ghost" onClick={()=>go("dashboard")} full={false}>← Back</Btn>}</div>{upl&&prog>=45&&<FaceScan stage={stage} prog={Math.min(Math.round((prog-45)*100/55),100)}/>}{!upl&&!mode&&!file&&<div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginBottom:20,perspective:1200}}>
   <UploadOptionCard type="record" title="Record" desc="WEBCAM + MIC" badge="Live" onClick={()=>setMode('record')}/>
   <UploadOptionCard type="upload" title="Upload" desc="MP4 · WEBM · MOV" badge="200MB Max" onClick={()=>setMode('upload')}/>
