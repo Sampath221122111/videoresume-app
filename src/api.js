@@ -18,13 +18,25 @@ class ApiClient {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: 'Request failed' }));
-      throw new Error(err.detail || `HTTP ${res.status}`);
+      const error = new Error(err.detail || `HTTP ${res.status}`);
+      error.status = res.status;
+      throw error;
     }
     return res.json();
   }
 
   async startProcessing(data) {
     return this._fetch('/api/process-video', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  // Re-runs the pipeline against a submission whose video is already uploaded.
+  async retrySubmission(submissionId) {
+    return this._fetch(`/api/submissions/${submissionId}/retry`, { method: 'POST' });
+  }
+
+  // Asks the backend to fail submissions abandoned by a restarted worker.
+  async reconcile() {
+    return this._fetch('/api/reconcile', { method: 'POST' });
   }
 
   async getJobStatus(jobId) {
@@ -39,16 +51,34 @@ class ApiClient {
     return this._fetch('/health');
   }
 
-  waitForCompletion(jobId, onProgress = () => {}, interval = 3000) {
+  /**
+   * Poll a job to completion.
+   *
+   * A 404 means the job record is gone — the worker restarted, or Redis
+   * dropped it. Retrying forever would hang the UI on a job that no longer
+   * exists, so a short grace period covers a transient blip and anything
+   * beyond that is reported as a failure the user can retry from.
+   */
+  waitForCompletion(jobId, onProgress = () => {}, interval = 2000) {
     return new Promise((resolve, reject) => {
+      let missing = 0;
+      const MAX_MISSING = 3;
+
       const poll = async () => {
         try {
           const s = await this.getJobStatus(jobId);
+          missing = 0;
           onProgress(s);
           if (s.status === 'completed') resolve(s);
           else if (s.status === 'failed') reject(new Error(s.error || 'Processing failed'));
           else setTimeout(poll, interval);
-        } catch (e) { reject(e); }
+        } catch (e) {
+          if (e.status === 404 && ++missing <= MAX_MISSING) {
+            setTimeout(poll, interval);
+            return;
+          }
+          reject(e);
+        }
       };
       poll();
     });

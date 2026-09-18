@@ -294,6 +294,10 @@ const FaceScan=({stage,prog=0})=>{
 };
 
 /* Recorder */
+// A talking-head resume video carries almost no motion detail, so 720p at
+// 1.5 Mbps is visually equivalent to the browser default here while producing a
+// file several times smaller — which is most of the perceived upload time.
+const REC_VIDEO_BPS=1500000, REC_AUDIO_BPS=96000;
 const Recorder=({onDone,onCancel})=>{
   const vr=useRef(),mr=useRef(),sr=useRef(),ch=useRef([]),tr=useRef(),pvUrl=useRef(),alive=useRef(true);
   const[rec,sR]=useState(false),[cd,sC]=useState(null),[el,sE]=useState(0),[rdy,sRdy]=useState(false),[err,sErr]=useState(null),[pv,sPv]=useState(null);
@@ -317,7 +321,7 @@ const Recorder=({onDone,onCancel})=>{
     try{
       let stream;
       try{
-        stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1920},height:{ideal:1080},facingMode:'user'},audio:true});
+        stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720},frameRate:{ideal:30,max:30},facingMode:'user'},audio:{echoCancellation:true,noiseSuppression:true}});
       }catch(first){
         if(first?.name!=='OverconstrainedError'&&first?.name!=='ConstraintNotSatisfiedError')throw first;
         stream=await navigator.mediaDevices.getUserMedia({video:true,audio:true});
@@ -335,7 +339,7 @@ const Recorder=({onDone,onCancel})=>{
   useEffect(()=>{alive.current=true;const bodyStyle=document.body.style.cssText;const htmlStyle=document.documentElement.style.cssText;document.body.style.overflow='hidden';document.documentElement.style.overflow='hidden';startCamera();return()=>{alive.current=false;clearInterval(tr.current);mr.current?.stop();stopCamera();if(pvUrl.current)URL.revokeObjectURL(pvUrl.current);document.body.style.cssText=bodyStyle;document.documentElement.style.cssText=htmlStyle}},[]);
   useEffect(()=>{const v=vr.current;if(!pv&&v&&sr.current&&v.srcObject!==sr.current){v.srcObject=sr.current;v.play().catch(()=>{})}});
   const scd=()=>{sC(3);let c=3;const iv=setInterval(()=>{c--;if(c<=0){clearInterval(iv);sC(null);startRecording()}else sC(c)},1000)};
-  const startRecording=()=>{if(!sr.current)return;ch.current=[];const mime=MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")?"video/webm;codecs=vp9,opus":"video/webm";const recorder=new MediaRecorder(sr.current,{mimeType:mime});recorder.ondataavailable=e=>{if(e.data.size>0)ch.current.push(e.data)};recorder.onstop=()=>{const blob=new Blob(ch.current,{type:'video/webm'});stopCamera();pvUrl.current=URL.createObjectURL(blob);sPv(blob)};mr.current=recorder;recorder.start(100);sR(true);sE(0);tr.current=setInterval(()=>sE(p=>{if(p>=300){stopRecording();return 300}return p+1}),1000)};
+  const startRecording=()=>{if(!sr.current)return;ch.current=[];const mime=MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")?"video/webm;codecs=vp9,opus":"video/webm";const recorder=new MediaRecorder(sr.current,{mimeType:mime,videoBitsPerSecond:REC_VIDEO_BPS,audioBitsPerSecond:REC_AUDIO_BPS});recorder.ondataavailable=e=>{if(e.data.size>0)ch.current.push(e.data)};recorder.onstop=()=>{const blob=new Blob(ch.current,{type:'video/webm'});stopCamera();pvUrl.current=URL.createObjectURL(blob);sPv(blob)};mr.current=recorder;recorder.start(1000);sR(true);sE(0);tr.current=setInterval(()=>sE(p=>{if(p>=300){stopRecording();return 300}return p+1}),1000)};
   const stopRecording=()=>{clearInterval(tr.current);if(mr.current?.state==='recording')mr.current.stop();sR(false)};
   const retake=()=>{if(pvUrl.current)URL.revokeObjectURL(pvUrl.current);pvUrl.current=null;sPv(null);sE(0);setTimeout(()=>{if(alive.current)startCamera()},0)};
   const fm=s=>`${Math.floor(s/60).toString().padStart(2,"0")}:${(s%60).toString().padStart(2,"0")}`;
@@ -566,6 +570,7 @@ const Dash=({go,show,session,profile,setProfile,subs,onLogout,ls,tab,setTab,selS
   const comp=subs.filter(s=>s.status==="completed");
   const [mobileNavOpen,setMobileNavOpen]=useState(false);
   useEffect(()=>{if(!session?.user?.id)return;const iv=setInterval(()=>ls(session.user.id),10000);return()=>clearInterval(iv)},[session?.user?.id]);
+  useEffect(()=>{if(!session?.access_token)return;let cancelled=false;(async()=>{try{api.setToken(session.access_token);const r=await api.reconcile();if(!cancelled&&r.reconciled>0)await ls(session.user.id)}catch(e){console.warn("[reconcile] skipped:",e.message)}})();return()=>{cancelled=true}},[session?.access_token]);
   const accountNav=[
     {id:'prof',l:'Profile',paths:['M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2','M12 7a4 4 0 100 8 4 4 0 000-8z']},
     {id:'sett',l:'Settings',paths:['M12 15a3 3 0 100-6 3 3 0 000 6z','M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z']},
@@ -634,7 +639,7 @@ const Dash=({go,show,session,profile,setProfile,subs,onLogout,ls,tab,setTab,selS
       <UserCard profile={profile} session={session} onLogout={onLogout}/>
     </aside>
     <main className="dashboard-main" style={{flex:1,marginLeft:260,padding:'32px 44px',minHeight:'100vh'}}>
-      {tab==='overview'&&<OvTab subs={subs} comp={comp} go={go} profile={profile} show={show} setTab={setTab} setSelSub={setSelSub}/>}
+      {tab==='overview'&&<OvTab subs={subs} comp={comp} go={go} profile={profile} show={show} setTab={setTab} setSelSub={setSelSub} session={session} ls={ls}/>}
       {tab==='submissions'&&<SubTab subs={subs} show={show} ls={ls} session={session}/>}
       {tab==='resumes'&&<ResTab subs={comp}/>}
       {tab==='clips'&&<ClipTab subs={comp}/>}
@@ -807,7 +812,7 @@ const AmbientOrbs = () => (
   </>
 );
 
-const OvTab=({subs,comp,go,profile,show,setTab,setSelSub})=>(
+const OvTab=({subs,comp,go,profile,show,setTab,setSelSub,session,ls})=>(
   <div style={{position:'relative',minHeight:'80vh'}}>
     {/* Ambient effects */}
     <AmbientBg/>
@@ -846,7 +851,7 @@ const OvTab=({subs,comp,go,profile,show,setTab,setSelSub})=>(
         ?<Card animate delay={0.7} style={{textAlign:'center',padding:48}}><p style={{color:T.dim}}>No submissions yet.</p></Card>
         :<div style={{display:'flex',flexDirection:'column',gap:8}}>
           {subs.slice(0,5).map((s,i)=>(
-            <ActivityItem key={s.id} s={s} i={i} setTab={setTab} setSelSub={setSelSub}/>
+            <ActivityItem key={s.id} s={s} i={i} setTab={setTab} setSelSub={setSelSub} session={session} ls={ls} show={show}/>
           ))}
         </div>
       }
@@ -854,8 +859,35 @@ const OvTab=({subs,comp,go,profile,show,setTab,setSelSub})=>(
   </div>
 );
 
+/* Re-runs analysis for a submission that never produced a resume.
+
+   The video is already in Cloudinary, so a run that failed — or that was
+   abandoned when the backend restarted mid-pipeline — is recoverable without
+   asking the user to record and upload again. */
+const RetryBtn=({s,session,ls,show,compact=false})=>{
+  const[busy,setBusy]=useState(false);
+  if(!s||s.status==="completed"||!s.video_url)return null;
+  const run=async()=>{
+    if(!session)return;
+    setBusy(true);
+    try{
+      api.setToken(session.access_token);
+      const job=await api.retrySubmission(s.id);
+      show("Analysis restarted","success");
+      await api.waitForCompletion(job.job_id,()=>{},2000);
+      show("Resume & clip ready!","success");
+    }catch(e){
+      show(e.message||"Retry failed","error");
+    }finally{
+      setBusy(false);
+      try{await ls(session.user.id)}catch{}
+    }
+  };
+  return<button onClick={run} disabled={busy} style={{padding:compact?'6px 14px':'8px 16px',borderRadius:8,fontSize:compact?11.5:12,fontWeight:600,background:'rgba(96,165,250,0.06)',color:'#60a5fa',border:'1px solid rgba(96,165,250,0.18)',cursor:busy?'wait':'pointer',fontFamily:T.font,opacity:busy?0.55:1,transition:'all 0.3s'}}>{busy?"Retrying...":"Retry"}</button>;
+};
+
 /* Activity item with hover effects */
-const ActivityItem = ({s, i, setTab, setSelSub}) => {
+const ActivityItem = ({s, i, setTab, setSelSub, session, ls, show}) => {
   const [hov, setHov] = useState(false);
   return (
     <div className="activity-item" onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} style={{
@@ -896,6 +928,7 @@ const ActivityItem = ({s, i, setTab, setSelSub}) => {
         {s.resume_pdf_url&&<a href={s.resume_pdf_url} target="_blank" rel="noopener" style={{padding:'6px 14px',borderRadius:8,fontSize:11.5,fontWeight:600,background:hov?'#fff':'rgba(255,255,255,0.04)',color:hov?'#0a0a0a':'#fff',border:`1px solid rgba(255,255,255,0.08)`,transition:'all 0.3s',textDecoration:'none',boxShadow:hov?'0 0 20px rgba(255,255,255,0.1)':'none'}}>Resume</a>}
         {s.highlight_clip_url&&<a href={s.highlight_clip_url} target="_blank" rel="noopener" style={{padding:'6px 14px',borderRadius:8,fontSize:11.5,fontWeight:600,background:'rgba(167,139,250,0.04)',color:T.purple,border:'1px solid rgba(167,139,250,0.08)',textDecoration:'none',transition:'all 0.3s'}}>Clip</a>}
         {s.status==="completed"&&<span onClick={()=>{setSelSub(s);setTab('analytics')}} style={{padding:'6px 14px',borderRadius:8,fontSize:11.5,fontWeight:600,background:'rgba(250,204,21,0.04)',color:T.warning,border:'1px solid rgba(250,204,21,0.08)',cursor:'pointer',transition:'all 0.3s'}}>Analytics</span>}
+        <RetryBtn s={s} session={session} ls={ls} show={show} compact/>
         <span style={{padding:'5px 12px',borderRadius:8,fontSize:10.5,fontWeight:600,background:s.status==="completed"?'rgba(74,222,128,0.05)':s.status==="failed"?'rgba(248,113,113,0.05)':'rgba(250,204,21,0.05)',color:s.status==="completed"?T.success:s.status==="failed"?T.danger:T.warning,textTransform:'capitalize',letterSpacing:0.3}}>{s.status}</span>
       </div>
     </div>
@@ -903,7 +936,7 @@ const ActivityItem = ({s, i, setTab, setSelSub}) => {
 };
 
 /* Submissions */
-const SubTab=({subs,show,ls,session})=>{const del=async id=>{if(!confirm('Delete?'))return;try{await db.deleteSubmission(id);show("Deleted","success");await ls(session.user.id)}catch(e){show(e.message,"error")}};return<div><div style={{marginBottom:28}}><h1 style={{fontSize:26,fontWeight:800}}>Submissions</h1><p style={{color:T.muted,fontSize:14,marginTop:4}}>Your full-length recorded videos</p></div>{subs.length===0?<Card animate style={{textAlign:'center',padding:56}}><p style={{color:T.dim}}>None yet.</p></Card>:<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(380px,1fr))',gap:18}}>{subs.map((s,i)=><Card key={s.id} animate delay={i*0.08} style={{padding:0,overflow:'hidden'}}><div style={{background:'#000',position:'relative',overflow:'hidden'}}>{s.video_url?<video src={s.video_url} controls controlsList="nodownload" style={{width:'100%',display:'block',maxHeight:260}} preload="metadata"/>:<div style={{height:200,background:'linear-gradient(135deg,#111,#0b0b0b)',display:'flex',alignItems:'center',justifyContent:'center'}}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="1.5"><polygon points="23 7 16 12 23 17"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div>}<div style={{position:'absolute',top:12,right:12}}><span style={{padding:'4px 12px',borderRadius:8,fontSize:10.5,fontWeight:700,background:s.status==="completed"?'rgba(74,222,128,0.15)':s.status==="failed"?'rgba(248,113,113,0.15)':'rgba(250,204,21,0.15)',color:s.status==="completed"?T.success:s.status==="failed"?T.danger:T.warning,textTransform:'uppercase',letterSpacing:.5,backdropFilter:'blur(6px)'}}>{s.status}</span></div>{s.confidence_score>0&&<div style={{position:'absolute',top:12,left:12,padding:'4px 10px',borderRadius:8,background:'rgba(0,0,0,0.7)',backdropFilter:'blur(6px)',fontSize:12,fontWeight:700,color:'#fff'}}>{Math.round(s.confidence_score)}%</div>}<div style={{position:'absolute',bottom:12,left:12,padding:'3px 10px',borderRadius:6,background:'rgba(0,0,0,0.7)',backdropFilter:'blur(6px)',fontSize:10,fontWeight:600,color:'rgba(255,255,255,0.6)',letterSpacing:0.5}}>FULL VIDEO</div></div><div style={{padding:'18px 22px'}}><div style={{fontWeight:700,fontSize:15,marginBottom:4}}>{s.video_filename||"Video"}</div><div style={{fontSize:12,color:T.dim,marginBottom:14,display:'flex',alignItems:'center',gap:8}}>{new Date(s.created_at).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}{s.upload_method&&<span style={{padding:'2px 8px',borderRadius:5,fontSize:10,background:'rgba(255,255,255,0.03)',border:`1px solid ${T.border}`,color:T.muted}}>{s.upload_method==='record'?'Recorded':'Uploaded'}</span>}</div><div style={{display:'flex',gap:8,flexWrap:'wrap'}}>{s.resume_pdf_url&&<a href={s.resume_pdf_url} target="_blank" rel="noopener" style={{padding:'8px 16px',borderRadius:8,fontSize:12,fontWeight:600,background:T.gradient,color:'#0b0b0b',textDecoration:'none'}}>Resume</a>}{s.video_url&&<a href={s.video_url} target="_blank" rel="noopener" style={{padding:'8px 16px',borderRadius:8,fontSize:12,fontWeight:600,background:'rgba(255,255,255,0.04)',color:'#fff',border:`1px solid ${T.border}`,textDecoration:'none',transition:'all 0.3s'}} onMouseEnter={e=>e.target.style.background='rgba(255,255,255,0.08)'} onMouseLeave={e=>e.target.style.background='rgba(255,255,255,0.04)'}>Open Video</a>}<button onClick={()=>del(s.id)} style={{padding:'8px 14px',borderRadius:8,fontSize:12,fontWeight:600,background:'rgba(248,113,113,0.04)',color:T.danger,border:'1px solid rgba(248,113,113,0.06)',cursor:'pointer',fontFamily:T.font,marginLeft:'auto'}}>Delete</button></div></div></Card>)}</div>}</div>};
+const SubTab=({subs,show,ls,session})=>{const del=async id=>{if(!confirm('Delete?'))return;try{await db.deleteSubmission(id);show("Deleted","success");await ls(session.user.id)}catch(e){show(e.message,"error")}};return<div><div style={{marginBottom:28}}><h1 style={{fontSize:26,fontWeight:800}}>Submissions</h1><p style={{color:T.muted,fontSize:14,marginTop:4}}>Your full-length recorded videos</p></div>{subs.length===0?<Card animate style={{textAlign:'center',padding:56}}><p style={{color:T.dim}}>None yet.</p></Card>:<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(380px,1fr))',gap:18}}>{subs.map((s,i)=><Card key={s.id} animate delay={i*0.08} style={{padding:0,overflow:'hidden'}}><div style={{background:'#000',position:'relative',overflow:'hidden'}}>{s.video_url?<video src={s.video_url} controls controlsList="nodownload" style={{width:'100%',display:'block',maxHeight:260}} preload="metadata"/>:<div style={{height:200,background:'linear-gradient(135deg,#111,#0b0b0b)',display:'flex',alignItems:'center',justifyContent:'center'}}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="1.5"><polygon points="23 7 16 12 23 17"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div>}<div style={{position:'absolute',top:12,right:12}}><span style={{padding:'4px 12px',borderRadius:8,fontSize:10.5,fontWeight:700,background:s.status==="completed"?'rgba(74,222,128,0.15)':s.status==="failed"?'rgba(248,113,113,0.15)':'rgba(250,204,21,0.15)',color:s.status==="completed"?T.success:s.status==="failed"?T.danger:T.warning,textTransform:'uppercase',letterSpacing:.5,backdropFilter:'blur(6px)'}}>{s.status}</span></div>{s.confidence_score>0&&<div style={{position:'absolute',top:12,left:12,padding:'4px 10px',borderRadius:8,background:'rgba(0,0,0,0.7)',backdropFilter:'blur(6px)',fontSize:12,fontWeight:700,color:'#fff'}}>{Math.round(s.confidence_score)}%</div>}<div style={{position:'absolute',bottom:12,left:12,padding:'3px 10px',borderRadius:6,background:'rgba(0,0,0,0.7)',backdropFilter:'blur(6px)',fontSize:10,fontWeight:600,color:'rgba(255,255,255,0.6)',letterSpacing:0.5}}>FULL VIDEO</div></div><div style={{padding:'18px 22px'}}><div style={{fontWeight:700,fontSize:15,marginBottom:4}}>{s.video_filename||"Video"}</div><div style={{fontSize:12,color:T.dim,marginBottom:14,display:'flex',alignItems:'center',gap:8}}>{new Date(s.created_at).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}{s.upload_method&&<span style={{padding:'2px 8px',borderRadius:5,fontSize:10,background:'rgba(255,255,255,0.03)',border:`1px solid ${T.border}`,color:T.muted}}>{s.upload_method==='record'?'Recorded':'Uploaded'}</span>}</div>{s.status==="failed"&&s.error_message&&<div style={{fontSize:11.5,lineHeight:1.5,color:T.danger,background:'rgba(248,113,113,0.05)',border:'1px solid rgba(248,113,113,0.12)',borderRadius:8,padding:'9px 12px',marginBottom:14}}>{s.error_message}</div>}<div style={{display:'flex',gap:8,flexWrap:'wrap'}}>{s.resume_pdf_url&&<a href={s.resume_pdf_url} target="_blank" rel="noopener" style={{padding:'8px 16px',borderRadius:8,fontSize:12,fontWeight:600,background:T.gradient,color:'#0b0b0b',textDecoration:'none'}}>Resume</a>}{s.video_url&&<a href={s.video_url} target="_blank" rel="noopener" style={{padding:'8px 16px',borderRadius:8,fontSize:12,fontWeight:600,background:'rgba(255,255,255,0.04)',color:'#fff',border:`1px solid ${T.border}`,textDecoration:'none',transition:'all 0.3s'}} onMouseEnter={e=>e.target.style.background='rgba(255,255,255,0.08)'} onMouseLeave={e=>e.target.style.background='rgba(255,255,255,0.04)'}>Open Video</a>}<RetryBtn s={s} session={session} ls={ls} show={show}/><button onClick={()=>del(s.id)} style={{padding:'8px 14px',borderRadius:8,fontSize:12,fontWeight:600,background:'rgba(248,113,113,0.04)',color:T.danger,border:'1px solid rgba(248,113,113,0.06)',cursor:'pointer',fontFamily:T.font,marginLeft:'auto'}}>Delete</button></div></div></Card>)}</div>}</div>};
 
 /* Resumes */
 const ResTab=({subs})=>{const rs=subs.filter(s=>s.resume_pdf_url);return<div><div style={{marginBottom:28}}><h1 style={{fontSize:26,fontWeight:800}}>Resumes</h1><p style={{color:T.muted,fontSize:14,marginTop:4}}>ATS-optimized PDF resumes</p></div>{rs.length===0?<Card animate style={{textAlign:'center',padding:56}}><p style={{color:T.dim}}>No resumes yet.</p></Card>:<div className="responsive-grid" style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(340px,1fr))',gap:24}}>{rs.map((s,i)=><ResumeCard3D key={s.id} s={s} i={i}/>)}</div>}</div>};
@@ -1639,7 +1672,7 @@ const UploadOptionCard=({type,title,desc,badge,onClick})=>{
 
 /* Upload Page */
 const UploadPg=({go,show,session,profile,ls})=>{const[mode,setMode]=useState(null),[file,setFile]=useState(null),[drag,setDrag]=useState(false);const[upl,setUpl]=useState(false),[prog,setProg]=useState(0),[stage,setStage]=useState("");const[error,setError]=useState(null),[prev,setPrev]=useState(null),[isRec,setIsRec]=useState(false);const fr=useRef();const hf=f=>{const v=valFile(f);if(!v.ok){setError(v.err);show(v.err,"error");return}setError(null);setFile(f);setPrev(URL.createObjectURL(f))};
-  const upload=async()=>{if(!file||!session)return;setUpl(true);setProg(0);setStage("Uploading video...");try{const cloud=await uploadToCloudinary(file,pct=>{setProg(Math.round(pct*0.4));setStage(`Uploading... ${pct}%`)});setStage("Saving to database...");setProg(42);const sub=await db.createSubmission(session.user.id,cloud.secure_url,file.name,file.size,isRec?"record":"upload");setProg(45);setStage("Starting AI analysis...");api.setToken(session.access_token);try{const job=await api.startProcessing({video_url:cloud.secure_url,submission_id:sub.id,user_id:session.user.id,user_name:profile?.full_name||"Student",user_university:profile?.university||"",user_branch:profile?.branch||"",user_year:profile?.year_of_study||1,phone:profile?.phone||"",linkedin:profile?.linkedin||"",location:profile?.location||""});setProg(50);await api.waitForCompletion(job.job_id,s=>{const backendProg=s.progress||0;setProg(50+Math.round(backendProg*0.5));setStage(s.message||"Processing...")},5000);show("Resume & clip ready!","success")}catch(e){console.error("[process] failed:",e);show(`Video saved, but analysis failed: ${e.message||"backend unreachable"}`,"error")}await ls(session.user.id);go("dashboard")}catch(err){console.error(err);show(err.message||"Failed","error");try{await ls(session.user.id)}catch{}}finally{setUpl(false)}};
+  const upload=async()=>{if(!file||!session)return;setUpl(true);setProg(0);setStage("Uploading video...");try{const cloud=await uploadToCloudinary(file,pct=>{setProg(Math.round(pct*0.4));setStage(`Uploading... ${pct}%`)});setStage("Saving to database...");setProg(42);const sub=await db.createSubmission(session.user.id,cloud.secure_url,file.name,file.size,isRec?"record":"upload");setProg(45);setStage("Starting AI analysis...");api.setToken(session.access_token);try{const job=await api.startProcessing({video_url:cloud.secure_url,submission_id:sub.id,user_id:session.user.id,user_name:profile?.full_name||"Student",user_university:profile?.university||"",user_branch:profile?.branch||"",user_year:profile?.year_of_study||1,phone:profile?.phone||"",linkedin:profile?.linkedin||"",location:profile?.location||""});setProg(50);await api.waitForCompletion(job.job_id,s=>{const backendProg=s.progress||0;setProg(50+Math.round(backendProg*0.5));setStage(s.message||"Processing...")},2000);show("Resume & clip ready!","success")}catch(e){console.error("[process] failed:",e);show(`Video saved, but analysis failed: ${e.message||"backend unreachable"}. Use Retry on the dashboard.`,"error")}await ls(session.user.id);go("dashboard")}catch(err){console.error(err);show(err.message||"Failed","error");try{await ls(session.user.id)}catch{}}finally{setUpl(false)}};
   return<div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:24,position:'relative',zIndex:2}}><Card style={{width:'100%',maxWidth:560,padding:36,animation:'fadeUp .4s ease'}} glow><div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:28}}><div><h2 style={{fontSize:22,fontWeight:800}}>New Submission</h2><p style={{color:T.dim,fontSize:13,marginTop:4}}>Record or upload</p></div>{!upl&&<Btn v="ghost" onClick={()=>go("dashboard")} full={false}>← Back</Btn>}</div>{upl&&prog>=45&&<FaceScan stage={stage} prog={Math.min(Math.round((prog-45)*100/55),100)}/>}{!upl&&!mode&&!file&&<div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginBottom:20,perspective:1200}}>
   <UploadOptionCard type="record" title="Record" desc="WEBCAM + MIC" badge="Live" onClick={()=>setMode('record')}/>
   <UploadOptionCard type="upload" title="Upload" desc="MP4 · WEBM · MOV" badge="200MB Max" onClick={()=>setMode('upload')}/>
